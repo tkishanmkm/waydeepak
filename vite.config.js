@@ -1,3 +1,14 @@
-﻿import { defineConfig } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-export default defineConfig({ plugins: [react()] });
+
+const allowedHosts = ['waydeepak.onrender.com'];
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    allowedHosts,
+  },
+  preview: {
+    allowedHosts,
+  },
+});
