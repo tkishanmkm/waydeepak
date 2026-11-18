@@ -1,5 +1,49 @@
-﻿@tailwind base;
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
-html { color-scheme: dark; }
-body { margin: 0; min-width: 320px; background: #0B0E17; }
+
+:root {
+  color-scheme: dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-color: #514078 #0B0E17;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #0B0E17;
+}
+
+#root > .min-h-screen {
+  background-image: radial-gradient(ellipse at 12% 0%, rgba(141, 104, 246, 0.12), transparent 38%), radial-gradient(ellipse at 90% 18%, rgba(91, 36, 229, 0.08), transparent 34%);
+}
+
+button, a, input, select, textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid #A78BFA;
+  outline-offset: 2px;
+}
+
+::selection {
+  background: rgba(141, 104, 246, 0.72);
+  color: #fff;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #0B0E17; }
+::-webkit-scrollbar-thumb { background: #40345f; border: 2px solid #0B0E17; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #7255b5; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
