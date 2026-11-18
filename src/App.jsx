@@ -111,14 +111,14 @@ const CryptoBadge = ({ asset, size = "md" }) => {
   if (asset === 'BTC') {
     return (
       <div className={`${sizes[size]} rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center font-bold text-white shadow-sm shadow-orange-500/30 shrink-0`}>
-        â‚¿
+        ₿
       </div>
     );
   }
   if (asset === 'ETH') {
     return (
       <div className={`${sizes[size]} rounded-full bg-gradient-to-br from-indigo-400 to-blue-600 flex items-center justify-center font-bold text-white shadow-sm shadow-indigo-500/30 shrink-0`}>
-        Îž
+        Ξ
       </div>
     );
   }
@@ -131,7 +131,7 @@ const CryptoBadge = ({ asset, size = "md" }) => {
   }
   return (
     <div className={`${sizes[size]} rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center font-bold text-white shadow-sm shadow-emerald-500/30 shrink-0`}>
-      â‚®
+      ₮
     </div>
   );
 };
@@ -144,11 +144,11 @@ const MARKET_PRICES_USD = {
 };
 
 const FIAT_RATES = {
-  INR: { symbol: 'â‚¹', rate: 86.80, label: 'INR (â‚¹)' },
+  INR: { symbol: '₹', rate: 86.80, label: 'INR (₹)' },
   USD: { symbol: '$', rate: 1.00, label: 'USD ($)' },
-  NGN: { symbol: 'â‚¦', rate: 1590.00, label: 'NGN (â‚¦)' },
-  AED: { symbol: 'Ø¯.Ø¥', rate: 3.67, label: 'AED (Ø¯.Ø¥)' },
-  EUR: { symbol: 'â‚¬', rate: 0.92, label: 'EUR (â‚¬)' }
+  NGN: { symbol: '₦', rate: 1590.00, label: 'NGN (₦)' },
+  AED: { symbol: 'د.إ', rate: 3.67, label: 'AED (د.إ)' },
+  EUR: { symbol: '€', rate: 0.92, label: 'EUR (€)' }
 };
 
 const SPARKLINE_DATA = {
@@ -302,7 +302,7 @@ export default function App() {
       side: 'buy',
       asset: 'USDT',
       fiatCurrency: 'INR',
-      fiatSymbol: 'â‚¹',
+      fiatSymbol: '₹',
       fiatAmount: 25000,
       usdAmount: 288.01,
       cryptoAmount: 284.59,
@@ -315,13 +315,13 @@ export default function App() {
         {
           id: 'm-101',
           sender: 'system',
-          text: 'STEP 1 COMPLETE â€” ESCROW LOCKED: 284.59 USDT is locked in WAYONES Multi-Sig Escrow.',
+          text: 'STEP 1 COMPLETE — ESCROW LOCKED: 284.59 USDT is locked in WAYONES Multi-Sig Escrow.',
           time: '10:30 AM'
         },
         {
           id: 'm-102',
           sender: 'user',
-          text: 'Paid â‚¹25,000 via PhonePe UPI! UTR: UTR412988736192. Screenshot attached.',
+          text: 'Paid ₹25,000 via PhonePe UPI! UTR: UTR412988736192. Screenshot attached.',
           time: '10:33 AM'
         },
         {
@@ -379,7 +379,7 @@ export default function App() {
   });
   const [savedPayments, setSavedPayments] = useState([
     { id: 'pm-1', type: 'UPI ID', label: 'deepak.wayones@okaxis', holder: 'Deepak Kumar', verified: true },
-    { id: 'pm-2', type: 'IMPS Bank', label: 'HDFC Bank â€¢â€¢â€¢â€¢ 4821 (IFSC: HDFC00012)', holder: 'Deepak Kumar', verified: true }
+    { id: 'pm-2', type: 'IMPS Bank', label: 'HDFC Bank •••• 4821 (IFSC: HDFC00012)', holder: 'Deepak Kumar', verified: true }
   ]);
   const [newPaymentLabel, setNewPaymentLabel] = useState('');
   const [newPaymentType, setNewPaymentType] = useState('UPI ID');
@@ -416,7 +416,7 @@ export default function App() {
     },
     {
       id: 'tx-903',
-      title: 'Quick Swap BTC â†’ ETH',
+      title: 'Quick Swap BTC → ETH',
       counterparty: 'WAYONES Instant Pool',
       asset: 'ETH',
       amount: '+0.1500 ETH',
@@ -584,7 +584,7 @@ export default function App() {
         {
           id: 'm-1',
           sender: 'system',
-          text: `STEP 1 COMPLETE â€” ESCROW LOCKED: ${cryptoAmount.toFixed(
+          text: `STEP 1 COMPLETE — ESCROW LOCKED: ${cryptoAmount.toFixed(
             selectedOfferForModal.asset === 'USDT' || selectedOfferForModal.asset === 'USDC' ? 2 : 5
           )} ${selectedOfferForModal.asset} is now locked in WAYONES Multi-Sig Escrow.`,
           time: 'Just now'
@@ -649,7 +649,7 @@ export default function App() {
     const uploadMsg = {
       id: `m-${Date.now()}`,
       sender: 'user',
-      text: `ðŸ“Ž [Uploaded Screenshot: payment_receipt_${activeTradeObj.id}.png â€” Verified by WAYONES OCR]`,
+      text: `ðŸ“Ž [Uploaded Screenshot: payment_receipt_${activeTradeObj.id}.png — Verified by WAYONES OCR]`,
       time: 'Just now'
     };
     setActiveTrades((prev) =>
@@ -673,8 +673,8 @@ export default function App() {
       id: `m-${Date.now()}`,
       sender: 'system',
       text: isGC
-        ? `STEP 2 COMPLETE â€” GIFT CARD SUBMITTED: Claim Code (${refCode}) locked for merchant verification.`
-        : `STEP 2 COMPLETE â€” PAYMENT MARKED: Reference (${refCode}) logged. Waiting for Escrow Release.`,
+        ? `STEP 2 COMPLETE — GIFT CARD SUBMITTED: Claim Code (${refCode}) locked for merchant verification.`
+        : `STEP 2 COMPLETE — PAYMENT MARKED: Reference (${refCode}) logged. Waiting for Escrow Release.`,
       time: 'Just now'
     };
 
@@ -738,7 +738,7 @@ export default function App() {
     const releaseMsg = {
       id: `m-${Date.now()}`,
       sender: 'system',
-      text: `STEP 3 COMPLETE â€” ESCROW RELEASED! ${activeTradeObj.cryptoAmount.toFixed(
+      text: `STEP 3 COMPLETE — ESCROW RELEASED! ${activeTradeObj.cryptoAmount.toFixed(
         decimals
       )} ${activeTradeObj.asset} has been settled into your WAYONES Wallet.`,
       time: 'Just now'
@@ -808,7 +808,7 @@ export default function App() {
     setTransactions((prev) => [
       {
         id: `swp-${Date.now()}`,
-        title: `Instant Convert ${swapFrom} â†’ ${swapTo}`,
+        title: `Instant Convert ${swapFrom} → ${swapTo}`,
         counterparty: 'WAYONES Zero-Fee Pool',
         asset: swapTo,
         amount: `+${swapOutput.toFixed(decimals)} ${swapTo}`,
@@ -1243,14 +1243,13 @@ export default function App() {
                         NOONES-STYLE GLOBAL P2P SUPER-APP
                       </div>
                       <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
-                        Trade Crypto & Gift Cards on{' '}
+                        P2P CRYPTO TRADING. REIMAGINED.{' '}
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#A78BFA] via-[#8D68F6] to-indigo-400">
                           WAYONES P2P.
                         </span>
                       </h1>
                       <p className="text-slate-300 text-sm leading-relaxed">
-                        400+ Payment methods including instant UPI (PhonePe, GPay, Paytm), IMPS,
-                        Discounted Gift Cards & Mobile Wallets locked by Smart Escrow.
+                        Buy and sell crypto with local payment methods including UPI (PhonePe, GPay, Paytm), IMPS, bank transfer, gift cards and digital wallets.
                       </p>
 
                       <div className="pt-2 flex flex-wrap items-center gap-3">
@@ -1386,13 +1385,13 @@ export default function App() {
                   <div className="p-5 sm:p-6 border-b border-white/[0.07] flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-                        Live {tradeSide === 'buy' ? 'Buy' : 'Sell'} Offers
+                        Featured {tradeSide === 'buy' ? 'Buy' : 'Sell'} Offers
                         <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#8D68F6]/20 text-[#C4B5FD] border border-[#8D68F6]/30">
                           {filteredOffers.length} Available
                         </span>
                       </h2>
                       <p className="text-xs text-slate-400 mt-0.5">
-                        Instant P2P matching with verified traders & automated escrow lock.
+                        Compare trader terms, payment methods, price and order limits before opening a trade.
                       </p>
                     </div>
                     <button
@@ -1445,18 +1444,18 @@ export default function App() {
                               <span className="flex items-center gap-1 text-emerald-400 font-semibold">
                                 <ThumbsUp className="w-3 h-3" /> {offer.likes || 950}
                               </span>
-                              <span>â€¢</span>
+                              <span>•</span>
                               <span>{offer.trades} trades</span>
-                              <span>â€¢</span>
+                              <span>•</span>
                               <span className="text-amber-400 font-semibold">{offer.completion}</span>
                             </div>
                             <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
                               <span className="inline-flex items-center gap-1 text-[#A78BFA]">
                                 <Clock className="w-3 h-3" /> ~{offer.speed}
                               </span>
-                              <span>â€¢</span>
+                              <span>•</span>
                               <span>
-                                {formatFiat(offer.minUsd)} â€“ {formatFiat(offer.maxUsd)}
+                                {formatFiat(offer.minUsd)} – {formatFiat(offer.maxUsd)}
                               </span>
                             </div>
                           </div>
@@ -1560,7 +1559,7 @@ export default function App() {
                       {cardCheckResult && (
                         <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[11px] space-y-0.5">
                           <p className="text-emerald-400 font-bold">
-                            âœ“ {cardCheckResult.status} ({cardCheckResult.valueUsd})
+                            ✓ {cardCheckResult.status} ({cardCheckResult.valueUsd})
                           </p>
                           <p className="text-slate-300">
                             Escrow Payout: <strong>{cardCheckResult.instantPayout}</strong>
@@ -1827,7 +1826,7 @@ export default function App() {
                                       maxLength={4}
                                       value={pinInput}
                                       onChange={(e) => setPinInput(e.target.value)}
-                                      placeholder="â€¢â€¢â€¢â€¢"
+                                      placeholder="••••"
                                       className="w-24 bg-[#131722] border border-white/15 rounded-xl px-3 py-2 text-center font-mono text-sm text-white"
                                     />
                                     <button
@@ -1987,7 +1986,7 @@ export default function App() {
                             <div>
                               <h3 className="font-bold text-white text-base">{asset}</h3>
                               <p className="text-[11px] text-slate-400">
-                                {NETWORK_CONFIGS[asset].map((n) => n.id).join(' â€¢ ')}
+                                {NETWORK_CONFIGS[asset].map((n) => n.id).join(' • ')}
                               </p>
                             </div>
                           </div>
@@ -2168,20 +2167,20 @@ export default function App() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="p-4 rounded-2xl bg-[#0B0E17] border border-emerald-500/30 space-y-2">
-                      <span className="text-[11px] font-bold text-emerald-400">âœ“ LEVEL 1 COMPLETED</span>
+                      <span className="text-[11px] font-bold text-emerald-400">✓ LEVEL 1 COMPLETED</span>
                       <h4 className="text-sm font-bold text-white">Phone & Email</h4>
                       <p className="text-xs text-slate-400">Daily Limit: $1,000 USD</p>
                     </div>
 
                     <div className="p-4 rounded-2xl bg-[#0B0E17] border border-emerald-500/30 space-y-2">
-                      <span className="text-[11px] font-bold text-emerald-400">âœ“ LEVEL 2 COMPLETED</span>
+                      <span className="text-[11px] font-bold text-emerald-400">✓ LEVEL 2 COMPLETED</span>
                       <h4 className="text-sm font-bold text-white">PAN / Aadhaar / Govt ID</h4>
                       <p className="text-xs text-slate-400">Daily Limit: $50,000 USD</p>
                     </div>
 
                     <div className="p-4 rounded-2xl bg-[#0B0E17] border border-[#8D68F6]/40 space-y-2">
                       <span className="text-[11px] font-bold text-[#A78BFA]">
-                        {kycLevels.level3 ? 'âœ“ LEVEL 3 COMPLETED' : 'LEVEL 3 MERCHANTS'}
+                        {kycLevels.level3 ? '✓ LEVEL 3 COMPLETED' : 'LEVEL 3 MERCHANTS'}
                       </span>
                       <h4 className="text-sm font-bold text-white">Address & Video KYC</h4>
                       {kycLevels.level3 ? (
@@ -2277,7 +2276,7 @@ export default function App() {
                           </span>
                           <p className="text-sm font-bold text-white mt-1">{pm.label}</p>
                         </div>
-                        <span className="text-xs text-emerald-400 font-semibold">âœ“ Verified</span>
+                        <span className="text-xs text-emerald-400 font-semibold">✓ Verified</span>
                       </div>
                     ))}
                   </div>
@@ -2451,7 +2450,7 @@ export default function App() {
                             <Activity className="w-3.5 h-3.5 text-sky-400" /> Pending KYC / WD
                           </span>
                           <p className="text-lg sm:text-xl font-extrabold text-white mt-1">
-                            {adminKycList.filter((k) => k.status === 'PENDING').length} KYC â€¢{' '}
+                            {adminKycList.filter((k) => k.status === 'PENDING').length} KYC •{' '}
                             {adminWithdrawals.filter((w) => w.status === 'PENDING').length} WD
                           </p>
                           <span className="text-[10px] text-sky-300">In Verification Queue</span>
@@ -2519,7 +2518,7 @@ export default function App() {
                                     {tr.status}
                                   </span>
                                   <span className="text-xs text-slate-300 font-semibold">
-                                    Seller: @{tr.offer.trader} â€¢ Buyer: @deepak_pro
+                                    Seller: @{tr.offer.trader} • Buyer: @deepak_pro
                                   </span>
                                 </div>
 
@@ -2545,7 +2544,7 @@ export default function App() {
                                   <p className="text-slate-300">
                                     Screenshot OCR:{' '}
                                     <span className="text-emerald-400 font-semibold">
-                                      {tr.receiptAttached ? 'âœ“ Verified Attached' : 'Pending'}
+                                      {tr.receiptAttached ? '✓ Verified Attached' : 'Pending'}
                                     </span>
                                   </p>
                                 </div>
@@ -2595,7 +2594,7 @@ export default function App() {
                                     onClick={() => handleAdminResolveTrade(tr.id, 'RELEASE_TO_BUYER')}
                                     className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold shadow-lg shadow-emerald-500/20"
                                   >
-                                    âœ“ Force Release {tr.asset} to Buyer
+                                    ✓ Force Release {tr.asset} to Buyer
                                   </button>
                                 </div>
                               )}
@@ -2655,10 +2654,10 @@ export default function App() {
                                   )}
                                 </div>
                                 <p className="text-xs text-slate-300">
-                                  {u.fullName} â€¢ {u.docType} ({u.docNumber})
+                                  {u.fullName} • {u.docType} ({u.docNumber})
                                 </p>
                                 <p className="text-[11px] text-slate-400">
-                                  Balance: <strong className="text-white">${u.walletUsdt.toFixed(2)} USDT</strong> â€¢ Submitted {u.submittedAt}
+                                  Balance: <strong className="text-white">${u.walletUsdt.toFixed(2)} USDT</strong> • Submitted {u.submittedAt}
                                 </p>
                               </div>
 
@@ -2733,7 +2732,7 @@ export default function App() {
                               >
                                 <div>
                                   <p className="text-sm font-bold text-white">
-                                    @{w.username} â€” {w.amount} {w.asset} ({w.network})
+                                    @{w.username} — {w.amount} {w.asset} ({w.network})
                                   </p>
                                   <p className="text-xs font-mono text-[#A78BFA]">{w.address}</p>
                                   <span className="text-[11px] text-slate-400">{w.time}</span>
@@ -2790,7 +2789,7 @@ export default function App() {
                                 className="p-3 rounded-xl bg-[#0B0E17] border border-white/10 flex items-center justify-between text-xs"
                               >
                                 <div>
-                                  <span className="font-bold text-white">@{o.trader}</span> â€¢{' '}
+                                  <span className="font-bold text-white">@{o.trader}</span> •{' '}
                                   <span className="text-[#A78BFA] uppercase font-bold">
                                     {o.type} {o.asset}
                                   </span>{' '}
@@ -2984,7 +2983,7 @@ export default function App() {
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-white truncate">{tx.title}</p>
                           <p className="text-[10px] text-slate-400 truncate">
-                            {tx.counterparty} â€¢ {tx.time}
+                            {tx.counterparty} • {tx.time}
                           </p>
                         </div>
                       </div>
@@ -3176,7 +3175,7 @@ export default function App() {
                   <div className="flex justify-between text-xs text-slate-400 mb-1">
                     <span>Enter Value ({fiat})</span>
                     <span>
-                      Limits: {formatFiat(selectedOfferForModal.minUsd)} â€“{' '}
+                      Limits: {formatFiat(selectedOfferForModal.minUsd)} –{' '}
                       {formatFiat(selectedOfferForModal.maxUsd)}
                     </span>
                   </div>
@@ -3288,7 +3287,7 @@ export default function App() {
                   >
                     {NETWORK_CONFIGS[walletModal.asset].map((n) => (
                       <option key={n.id} value={n.id}>
-                        {n.name} â€” Fee: {n.fee} ({n.arrival})
+                        {n.name} — Fee: {n.fee} ({n.arrival})
                       </option>
                     ))}
                   </select>
