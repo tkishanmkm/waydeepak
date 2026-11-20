@@ -997,7 +997,8 @@
         out.push(`<span class="px-2 py-0.5 rounded-md bg-brand/15 border border-brand/35 text-[11px] font-semibold text-brand">Video Proof Required</span>`);
       }
       if (flags.idRequired) {
-        out.push(`<span class="px-2 py-0.5 rounded-md bg-sky-500/15 border border-sky-400/35 text-[11px] font-semibold text-sky-300">ID Required</span>`);      }
+        out.push(`<span class="px-2 py-0.5 rounded-md bg-sky-500/15 border border-sky-400/35 text-[11px] font-semibold text-sky-300">ID Required</span>`);
+      }
       return out.join('');
     }
 
@@ -1996,7 +1997,8 @@
           senderName: byAdmin ? 'Wayones Arbitrator' : 'Wayones Escrow',
           senderRole: byAdmin ? 'ADMIN' : 'SYSTEM',
           text: byAdmin
-            ? `FINAL VERDICT: Awarded ${formatCrypto(qty, coin)} ${coin} to Buyer. ${adminNote}`            : `Seller verified payment & released ${formatCrypto(qty, coin)} ${coin} from Escrow to Buyer!`,
+            ? `FINAL VERDICT: Awarded ${formatCrypto(qty, coin)} ${coin} to Buyer. ${adminNote}`
+            : `Seller verified payment & released ${formatCrypto(qty, coin)} ${coin} from Escrow to Buyer!`,
           createdAt: Date.now()
         });
 
@@ -2996,6 +2998,7 @@
       closeModal();
       openOwnerOverlay();
     }
+
     function openOwnerOverlay() {
       if (!state.authUser || !state.adminConfig || state.adminConfig.ownerUid !== state.authUser.uid || !state.ownerSessionUnlocked) {
         return;
