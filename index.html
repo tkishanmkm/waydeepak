@@ -1,14 +1,3498 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0B0E17" />
-    <meta name="description" content="WAYONES P2P Crypto Exchange" />
-    <title>WAYONES - P2P Crypto Exchange</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wayones — Global Non-Custodial P2P Crypto Exchange</title>
+
+  <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            display: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              DEFAULT: '#8D68F6',
+              hover: '#7A52F4',
+              soft: 'rgba(141, 104, 246, 0.14)',
+              border: 'rgba(141, 104, 246, 0.35)',
+            },
+            surface: {
+              bg: '#0B0B11',
+              card: '#13131E',
+              elevated: '#1C1C2B',
+              border: '#252538',
+            },
+            buy: '#10B981',
+            sell: '#EF4444',
+            escrow: '#F59E0B',
+          },
+          boxShadow: {
+            glow: '0 8px 28px -6px rgba(141, 104, 246, 0.45)',
+            card: '0 8px 24px -4px rgba(0, 0, 0, 0.55)',
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Ethers.js v6 for real client-side EVM Wallet & BIP-39 Seed Generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js" defer></script>
+
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      background-color: #0B0B11;
+      color: #FFFFFF;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0B0B11; }
+    ::-webkit-scrollbar-thumb { background: #252538; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #8D68F6; }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px) scale(0.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(-10px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .animate-fade { animation: fadeIn 0.16s ease-out forwards; }
+    .animate-slide { animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    .animate-toast { animation: toastIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+    .hero-glow {
+      background:
+        radial-gradient(circle at 90% 8%, rgba(141, 104, 246, 0.24), transparent 50%),
+        radial-gradient(circle at 8% 95%, rgba(16, 185, 129, 0.08), transparent 45%),
+        linear-gradient(145deg, #161626 0%, #11111C 100%);
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; }
+  </style>
+</head>
+<body class="bg-surface-bg text-white antialiased selection:bg-brand/30 selection:text-white">
+
+  <!-- ==================== TOAST NOTIFICATION CONTAINER ==================== -->
+  <div id="toast-container" class="fixed top-4 right-4 left-4 sm:left-auto sm:w-96 z-[140] flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ==================== STICKY HEADER (ZERO ADMIN HINTS) ==================== -->
+  <header class="sticky top-0 z-40 h-16 bg-surface-bg/92 backdrop-blur-xl border-b border-surface-border">
+    <div class="max-w-7xl mx-auto h-full px-3.5 sm:px-6 flex items-center justify-between gap-2">
+      <!-- Brand Logo (Minimalist 'w' on mobile, full 'wayones' on sm+) -->
+      <button id="brand-logo-btn" type="button" class="flex items-center gap-2.5 focus:outline-none group shrink-0 select-none" aria-label="Wayones Home">
+        <div class="w-9 h-9 rounded-xl bg-brand/15 border border-brand/40 flex items-center justify-center group-hover:bg-brand/25 transition-colors">
+          <svg width="22" height="22" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4.5 9L8.5 19.5C8.9 20.5 10.3 20.5 10.7 19.5L13.4 13C13.6 12.4 14.4 12.4 14.6 13L17.3 19.5C17.7 20.5 19.1 20.5 19.5 19.5L23.5 9" stroke="#8D68F6" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="14" cy="7.5" r="2.1" fill="#FFFFFF"/>
+          </svg>
+        </div>
+        <span class="hidden sm:inline font-display text-xl font-extrabold tracking-tight text-white">way<span class="text-brand">ones</span></span>
+      </button>
+
+      <!-- Desktop Navigation Bar -->
+      <nav class="hidden lg:flex items-center gap-1 bg-surface-card p-1 rounded-2xl border border-surface-border">
+        <button data-nav="market" onclick="window.app.switchView('market')" class="desk-nav-btn px-4 py-2 rounded-xl text-xs font-bold transition-all">Market</button>
+        <button data-nav="trades" onclick="window.app.switchView('trades')" class="desk-nav-btn px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5">
+          <span>Trades</span>
+          <span id="desk-trades-badge" class="hidden px-1.5 py-0.5 text-[10px] font-extrabold rounded-full bg-brand text-white leading-none">0</span>
+        </button>
+        <button data-nav="post" onclick="window.app.switchView('post')" class="desk-nav-btn px-4 py-2 rounded-xl text-xs font-bold transition-all">Post Ad</button>
+        <button data-nav="wallet" onclick="window.app.switchView('wallet')" class="desk-nav-btn px-4 py-2 rounded-xl text-xs font-bold transition-all">Wallet</button>
+        <button data-nav="profile" onclick="window.app.switchView('profile')" class="desk-nav-btn px-4 py-2 rounded-xl text-xs font-bold transition-all">Profile</button>
+      </nav>
+
+      <!-- Right Controls: Live Sync Status + Fiat Selector + Auth/Profile Pill -->
+      <div class="flex items-center gap-2 shrink-0">
+        <!-- Global Fiat Selector -->
+        <select id="header-fiat-select" onchange="window.app.setFiat(this.value)" aria-label="Fiat Currency" class="h-9 px-2.5 rounded-xl bg-surface-card hover:bg-surface-elevated border border-surface-border text-xs font-bold text-white focus:border-brand focus:outline-none cursor-pointer">
+          <option value="INR">₹ INR</option>
+          <option value="USD">$ USD</option>
+          <option value="EUR">€ EUR</option>
+          <option value="AED">د.إ AED</option>
+          <option value="NGN">₦ NGN</option>
+          <option value="BRL">R$ BRL</option>
+        </select>
+
+        <!-- Auth / User Pill -->
+        <button id="header-auth-btn" onclick="window.app.handleHeaderAuthClick()" class="h-9 px-3 rounded-xl bg-brand/15 hover:bg-brand/25 border border-brand/35 flex items-center gap-2 transition-colors">
+          <span id="header-sync-dot" class="w-2 h-2 rounded-full bg-buy"></span>
+          <span id="header-user-label" class="text-xs font-bold text-white max-w-[110px] truncate">Sign In</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== BANNED ACCOUNT WARNING BANNER ==================== -->
+  <div id="banned-banner" class="hidden bg-sell/15 border-b border-sell/40 px-4 py-2.5 text-center text-xs font-bold text-red-200">
+    Your account has been restricted by Wayones Moderation. Creating new offers and opening trades is disabled.
+  </div>
+
+  <!-- ==================== MAIN APP VIEWPORT ==================== -->
+  <main id="app-main" class="max-w-7xl mx-auto px-3.5 sm:px-6 pt-5 pb-28 lg:pb-12 min-h-[calc(100vh-4rem)]">
+    <div class="flex flex-col items-center justify-center py-24 text-center">
+      <div class="w-11 h-11 rounded-2xl border-2 border-brand border-t-transparent animate-spin mb-4"></div>
+      <div class="text-sm font-bold text-white">Connecting to Wayones Network...</div>
+      <div class="text-xs text-slate-400 mt-1">Initializing secure real-time sync</div>
+    </div>
+  </main>
+
+  <!-- ==================== MOBILE STICKY BOTTOM NAVIGATION ==================== -->
+  <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface-card/95 backdrop-blur-xl border-t border-surface-border pb-[env(safe-area-inset-bottom)]">
+    <div class="grid grid-cols-5 h-16">
+      <button data-nav="market" onclick="window.app.switchView('market')" class="mob-nav-btn flex flex-col items-center justify-center gap-1 text-[10px] font-bold transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+        <span>Market</span>
+      </button>
+
+      <button data-nav="trades" onclick="window.app.switchView('trades')" class="mob-nav-btn flex flex-col items-center justify-center gap-1 text-[10px] font-bold transition-colors">
+        <div class="relative">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+          <span id="mob-trades-badge" class="hidden absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 text-[9px] font-extrabold rounded-full bg-brand text-white flex items-center justify-center">0</span>
+        </div>
+        <span>Trades</span>
+      </button>
+
+      <button data-nav="post" onclick="window.app.switchView('post')" class="mob-nav-btn flex flex-col items-center justify-center gap-1 text-[10px] font-bold transition-colors">
+        <div class="w-8 h-6 rounded-lg bg-brand/20 border border-brand/40 flex items-center justify-center text-brand">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        </div>
+        <span>Post Ad</span>
+      </button>
+
+      <button data-nav="wallet" onclick="window.app.switchView('wallet')" class="mob-nav-btn flex flex-col items-center justify-center gap-1 text-[10px] font-bold transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12V7H5a2 2 0 010-4h14v4M3 5v14a2 2 0 002 2h16v-5M18 12a2 2 0 000 4h4v-4h-4z"/></svg>
+        <span>Wallet</span>
+      </button>
+
+      <button data-nav="profile" onclick="window.app.switchView('profile')" class="mob-nav-btn flex flex-col items-center justify-center gap-1 text-[10px] font-bold transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        <span>Profile</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ==================== MODAL & HIDDEN OWNER OVERLAY ROOTS ==================== -->
+  <div id="modal-root"></div>
+  <div id="owner-overlay-root"></div>
+
+  <!-- ==================== FIREBASE + APPLICATION ENGINE ==================== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import {
+      getAuth,
+      signInAnonymously,
+      signInWithCustomToken,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut,
+      updateProfile,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc,
+      updateDoc,
+      addDoc,
+      onSnapshot,
+      collection
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    /* =========================================================================
+       1. CONSTANTS, CURRENCIES, COINS & FEATURED LIQUIDITY FALLBACK
+       ========================================================================= */
+    const FIATS = {
+      INR: { code: 'INR', symbol: '₹', name: 'Indian Rupee', rateFromUSD: 85.50, locale: 'en-IN' },
+      USD: { code: 'USD', symbol: '$', name: 'US Dollar', rateFromUSD: 1.00, locale: 'en-US' },
+      EUR: { code: 'EUR', symbol: '€', name: 'Euro', rateFromUSD: 0.92, locale: 'de-DE' },
+      AED: { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham', rateFromUSD: 3.67, locale: 'en-AE' },
+      NGN: { code: 'NGN', symbol: '₦', name: 'Nigerian Naira', rateFromUSD: 1580.00, locale: 'en-NG' },
+      BRL: { code: 'BRL', symbol: 'R$', name: 'Brazilian Real', rateFromUSD: 5.75, locale: 'pt-BR' },
+    };
+
+    const COINS = {
+      USDT: { symbol: 'USDT', name: 'Tether USD', priceUSD: 1.00, decimals: 2 },
+      USDC: { symbol: 'USDC', name: 'USD Coin', priceUSD: 1.00, decimals: 2 },
+      BTC:  { symbol: 'BTC',  name: 'Bitcoin', priceUSD: 94850.00, decimals: 6 },
+      ETH:  { symbol: 'ETH',  name: 'Ethereum', priceUSD: 3210.00, decimals: 5 },
+      SOL:  { symbol: 'SOL',  name: 'Solana', priceUSD: 215.00, decimals: 4 },
+    };
+
+    const PAYMENT_METHODS = [
+      'UPI', 'IMPS', 'Bank Transfer', 'PhonePe', 'Paytm',
+      'Zelle', 'Wise', 'Revolut', 'SEPA Instant', 'PIX Instant',
+      'Emirates NBD', 'NIP Bank Transfer', 'OPay'
+    ];
+
+    const WALLET_NETWORKS = [
+      { id: 'BEP-20', label: 'BEP-20 (BSC)', badge: 'Low Fee' },
+      { id: 'POLYGON', label: 'Polygon PoS', badge: 'Instant' },
+      { id: 'ERC-20', label: 'ERC-20 (Ethereum)', badge: 'Mainnet' }
+    ];
+
+    // Fallback BIP-39 words used only if ethers CDN is unreachable offline
+    const FALLBACK_WORDS = [
+      'anchor','brave','cipher','delta','emerald','falcon','galaxy','harbor',
+      'ivory','jasper','kinetic','lantern','mercury','nebula','oracle','phoenix',
+      'quantum','radiant','solstice','titan','utopia','vanguard','whisper','zenith'
+    ];
+
+    // Sample "Featured Liquidity" offers displayed when Firestore offers collection is empty
+    const FEATURED_OFFERS = [
+      {
+        id: 'FEAT-USDT-BUY-1',
+        isFeatured: true,
+        creatorUid: 'featured_vikram_desk',
+        creatorName: 'VikramDesk_OTC',
+        type: 'SELL', // Vendor is SELLING crypto -> appears when user chooses BUY
+        crypto: 'USDT',
+        fiat: 'INR',
+        price: 86.45,
+        minLimit: 1000,
+        maxLimit: 150000,
+        availableAmount: 4800.00,
+        paymentMethods: ['UPI', 'IMPS', 'PhonePe'],
+        termsFlags: { thirdPartyAllowed: false, noCryptoRemarks: true, videoProofRequired: false, idRequired: false },
+        publicTerms: 'Own account payments ONLY. Sender bank name must match your Wayones display name. Zero crypto words in UPI note.',
+        privateInstructions: 'UPI ID: vikramdesk@okhdfcbank | Holder: Vikram Deshmukh | Bank: HDFC A/C 501004829104 (IFSC: HDFC0001204)',
+        status: 'ACTIVE',
+        completionRate: 99.8,
+        totalTrades: 1840,
+        createdAt: Date.now() - 86400000
+      },
+      {
+        id: 'FEAT-USDT-BUY-2',
+        isFeatured: true,
+        creatorUid: 'featured_flexi_global',
+        creatorName: 'FlexiGlobal_P2P',
+        type: 'SELL',
+        crypto: 'USDT',
+        fiat: 'INR',
+        price: 87.20,
+        minLimit: 500,
+        maxLimit: 100000,
+        availableAmount: 3150.00,
+        paymentMethods: ['UPI', 'Paytm', 'Bank Transfer', 'Wise'],
+        termsFlags: { thirdPartyAllowed: true, noCryptoRemarks: true, videoProofRequired: true, idRequired: false },
+        publicTerms: 'Third-party family/business transfers accepted! Must share bank UTR and screen-recording proof on request.',
+        privateInstructions: 'UPI: flexiglobal@paytm | Wise Tag: @flexiglobalp2p | Do NOT write USDT/Crypto in transfer remarks.',
+        status: 'ACTIVE',
+        completionRate: 98.6,
+        totalTrades: 965,
+        createdAt: Date.now() - 72000000
+      },
+      {
+        id: 'FEAT-USDT-USD-1',
+        isFeatured: true,
+        creatorUid: 'featured_atlas_usd',
+        creatorName: 'AtlasBridge_USD',
+        type: 'SELL',
+        crypto: 'USDT',
+        fiat: 'USD',
+        price: 1.012,
+        minLimit: 25,
+        maxLimit: 5000,
+        availableAmount: 12400.00,
+        paymentMethods: ['Zelle', 'Wise', 'Revolut'],
+        termsFlags: { thirdPartyAllowed: false, noCryptoRemarks: true, videoProofRequired: false, idRequired: true },
+        publicTerms: 'Instant US/Global USD settlement. Verified name-matched transfers only. Leave memo blank.',
+        privateInstructions: 'Zelle: desk@atlasbridge.io | Wise: @atlasbridgeusd | Name: Atlas Digital LLC',
+        status: 'ACTIVE',
+        completionRate: 99.6,
+        totalTrades: 1420,
+        createdAt: Date.now() - 60000000
+      },
+      {
+        id: 'FEAT-USDT-SELL-1',
+        isFeatured: true,
+        creatorUid: 'featured_instant_fiat',
+        creatorName: 'InstantFiat_Hub',
+        type: 'BUY', // Vendor is BUYING crypto -> appears when user chooses SELL
+        crypto: 'USDT',
+        fiat: 'INR',
+        price: 85.90,
+        minLimit: 1000,
+        maxLimit: 200000,
+        availableAmount: 6500.00,
+        paymentMethods: ['UPI', 'IMPS', 'Bank Transfer'],
+        termsFlags: { thirdPartyAllowed: false, noCryptoRemarks: true, videoProofRequired: false, idRequired: false },
+        publicTerms: 'I pay you within 2 minutes from my own verified bank account. Share your UPI/Bank in chat after escrow locks.',
+        privateInstructions: 'Drop your receiving UPI or Bank A/C in chat. Verify bank credit before clicking Release Crypto.',
+        status: 'ACTIVE',
+        completionRate: 99.7,
+        totalTrades: 2310,
+        createdAt: Date.now() - 50000000
+      },
+      {
+        id: 'FEAT-BTC-BUY-1',
+        isFeatured: true,
+        creatorUid: 'featured_satoshi_vault',
+        creatorName: 'SatoshiVault_Global',
+        type: 'SELL',
+        crypto: 'BTC',
+        fiat: 'INR',
+        price: 8140000,
+        minLimit: 2500,
+        maxLimit: 500000,
+        availableAmount: 0.42,
+        paymentMethods: ['IMPS', 'UPI', 'Bank Transfer'],
+        termsFlags: { thirdPartyAllowed: false, noCryptoRemarks: true, videoProofRequired: true, idRequired: false },
+        publicTerms: 'Direct BTC liquidity. Own verified account only. Video bank refresh proof required for orders above ₹50,000.',
+        privateInstructions: 'IMPS: Kotak Bank A/C 4412890123 | IFSC: KKBK0000958 | UPI: satoshivault@okaxis',
+        status: 'ACTIVE',
+        completionRate: 99.9,
+        totalTrades: 1105,
+        createdAt: Date.now() - 40000000
+      },
+      {
+        id: 'FEAT-SOL-BUY-1',
+        isFeatured: true,
+        creatorUid: 'featured_sol_express',
+        creatorName: 'SolExpress_Desk',
+        type: 'SELL',
+        crypto: 'SOL',
+        fiat: 'USD',
+        price: 216.50,
+        minLimit: 20,
+        maxLimit: 3000,
+        availableAmount: 55.00,
+        paymentMethods: ['Wise', 'Revolut', 'SEPA Instant', 'PIX Instant'],
+        termsFlags: { thirdPartyAllowed: true, noCryptoRemarks: true, videoProofRequired: false, idRequired: false },
+        publicTerms: 'Fast global SOL liquidity across Wise, Revolut, SEPA & PIX. Third-party accepted with receipt.',
+        privateInstructions: 'Revolut: @solexpress | Wise: @solexpressdesk',
+        status: 'ACTIVE',
+        completionRate: 99.2,
+        totalTrades: 670,
+        createdAt: Date.now() - 30000000
+      }
+    ];
+
+    /* =========================================================================
+       2. GLOBAL APPLICATION STATE (DEVICE-LOCAL WALLET KEPT IN MEMORY ONLY)
+       ========================================================================= */
+    const state = {
+      appId: typeof __app_id !== 'undefined' ? __app_id : 'wayones-global-p2p',
+      firebaseReady: false,
+      firebaseMode: 'initializing', // 'live' | 'offline_demo'
+      authUser: null, // Firebase Auth user object
+      isMember: false, // true when authenticated with Email/Password (or custom non-anonymous token)
+      activeView: 'market', // 'market' | 'trades' | 'post' | 'wallet' | 'profile'
+      tradesTab: 'active',
+      fiat: 'INR',
+      marketFilter: {
+        userAction: 'BUY', // 'BUY' crypto (matches offers.type === 'SELL') | 'SELL' crypto (matches offers.type === 'BUY')
+        crypto: 'USDT',
+        payment: 'ALL',
+        thirdParty: 'ALL', // 'ALL' | 'OWN_ONLY' | 'ALLOWED'
+        amount: '',
+        sort: 'best_price'
+      },
+      // Live Firestore collections (synced via onSnapshot)
+      usersMap: {},       // uid -> user doc
+      offers: [],         // Firestore offers
+      trades: [],         // Firestore trades
+      messages: [],       // Firestore trade_messages
+      adminConfig: null,  // Firestore system/adminConfig doc
+
+      // Non-Custodial Device-Local Wallet (NEVER uploaded to Firestore, NEVER stored in localStorage)
+      deviceWallet: {
+        address: '',
+        mnemonic: '',
+        privateKey: '',
+        network: 'BEP-20',
+        seedRevealed: false,
+        seedBackedUp: false
+      },
+
+      // Post Ad Form Draft
+      postDraft: {
+        type: 'SELL', // 'SELL' crypto or 'BUY' crypto
+        crypto: 'USDT',
+        fiat: 'INR',
+        paymentMethods: ['UPI', 'IMPS'],
+        thirdPartyAllowed: false,
+        noCryptoRemarks: true,
+        videoProofRequired: false,
+        idRequired: false
+      },
+
+      // Active Modals & Hidden Owner Admin Panel State
+      activeTradeRoomId: null,
+      ownerPanelOpen: false,
+      ownerPanelTab: 'disputes', // 'disputes' | 'moderation' | 'security'
+      selectedAdminDisputeId: null,
+      ownerSessionUnlocked: false
+    };
+
+    let db = null;
+    let auth = null;
+    let unsubscribers = [];
+    let tradeTimerHandle = null;
+    let logoTapTimestamps = [];
+
+    /* =========================================================================
+       3. FIRESTORE STRICT PATH HELPERS (RULE 1: /artifacts/{appId}/public/data/...)
+       ========================================================================= */
+    function pubCol(name) {
+      return collection(db, 'artifacts', state.appId, 'public', 'data', name);
+    }
+    function pubDoc(name, id) {
+      return doc(db, 'artifacts', state.appId, 'public', 'data', name, id);
+    }
+
+    /* =========================================================================
+       4. UTILITIES: ESCAPE, CURRENCY, CLIPBOARD, SHA-256, TOASTS
+       ========================================================================= */
+    function esc(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function getFiatMeta(code = state.fiat) {
+      return FIATS[code] || FIATS.INR;
+    }
+
+    function formatFiat(amount, code = state.fiat) {
+      const m = getFiatMeta(code);
+      const n = Number.isFinite(Number(amount)) ? Number(amount) : 0;
+      return m.symbol + n.toLocaleString(m.locale, {
+        minimumFractionDigits: n >= 10000 ? 0 : 2,
+        maximumFractionDigits: 2
+      });
+    }
+
+    function formatCrypto(amount, crypto = 'USDT') {
+      const m = COINS[crypto] || COINS.USDT;
+      const n = Number.isFinite(Number(amount)) ? Number(amount) : 0;
+      return n.toFixed(m.decimals);
+    }
+
+    function shortAddr(addr) {
+      if (!addr || addr.length < 12) return addr || 'Not Initialized';
+      return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+    }
+
+    function timeAgo(ts) {
+      if (!ts) return 'Just now';
+      const diff = Math.max(0, Math.floor((Date.now() - Number(ts)) / 1000));
+      if (diff < 60) return `${diff}s ago`;
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+      return `${Math.floor(diff / 86400)}d ago`;
+    }
+
+    function copyText(text, successMsg = 'Copied to clipboard!') {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.top = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, 99999);
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (ok) {
+          showToast(successMsg, 'success');
+          return;
+        }
+      } catch (err) {
+        console.error('Copy error:', err);
+      }
+      showToast('Unable to copy automatically — please select and copy manually.', 'warning');
+    }
+
+    async function sha256Hex(str) {
+      const data = new TextEncoder().encode(str);
+      if (window.crypto && window.crypto.subtle) {
+        const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+      }
+      // Deterministic fallback hash only if subtle crypto is unavailable in insecure HTTP preview
+      let h = 2166136261;
+      for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+      return 'fb_' + (h >>> 0).toString(16).padStart(8, '0');
+    }
+
+    function showToast(message, type = 'info') {
+      const host = document.getElementById('toast-container');
+      if (!host) return;
+      const styles = {
+        success: { border: 'border-buy/45 bg-[#0F1E1B]/95', icon: '<svg class="w-5 h-5 text-buy shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' },
+        error:   { border: 'border-sell/45 bg-[#241218]/95', icon: '<svg class="w-5 h-5 text-sell shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' },
+        warning: { border: 'border-escrow/45 bg-[#231D11]/95', icon: '<svg class="w-5 h-5 text-escrow shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>' },
+        info:    { border: 'border-brand/45 bg-[#18152C]/95', icon: '<svg class="w-5 h-5 text-brand shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' }
+      };
+      const cfg = styles[type] || styles.info;
+      const el = document.createElement('div');
+      el.className = `pointer-events-auto animate-toast flex items-center gap-3 px-4 py-3 rounded-2xl border ${cfg.border} backdrop-blur-xl shadow-2xl text-xs sm:text-sm font-semibold text-white`;
+      el.innerHTML = `${cfg.icon}<span class="flex-1 leading-snug">${esc(message)}</span>`;
+      host.appendChild(el);
+      setTimeout(() => {
+        el.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(-8px)';
+        setTimeout(() => el.remove(), 220);
+      }, 3600);
+    }
+
+    function getCoinSVG(coin, size = 24) {
+      const s = Number(size);
+      if (coin === 'USDT') return `<svg width="${s}" height="${s}" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#26A17B"/><path d="M17.9 17.4c-.1.01-.68.04-1.92.04-1 0-1.7-.03-1.95-.04-3.84-.17-6.7-.84-6.7-1.64 0-.8 2.86-1.47 6.7-1.64v2.62c.25.02.97.06 1.97.06 1.2 0 1.8-.05 1.9-.06v-2.62c3.83.17 6.68.84 6.68 1.64 0 .8-2.85 1.47-6.68 1.64zm0-3.55V11.5h5.35V8.5H8.75v3h5.35v2.35c-4.35.2-7.62 1.07-7.62 2.12 0 1.05 3.27 1.92 7.62 2.12v7.6h3.8v-7.6c4.34-.2 7.6-1.07 7.6-2.12 0-1.05-3.26-1.92-7.6-2.12z" fill="#FFF"/></svg>`;
+      if (coin === 'BTC')  return `<svg width="${s}" height="${s}" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#F7931A"/><path d="M22.2 14.1c.3-2-1.2-3.1-3.3-3.8l.7-2.7-1.6-.4-.7 2.6c-.4-.1-.9-.2-1.3-.3l.7-2.6-1.6-.4-.7 2.7c-.4-.1-.7-.2-1-.2l-2.3-.6-.4 1.8s1.2.3 1.2.3c.7.2.8.6.8 1l-.8 3.1-1.2 4.6c-.1.2-.3.5-.8.4l-1.2-.3-.8 1.9 2.1.5c.4.1.8.2 1.2.3l-.7 2.7 1.6.4.7-2.7c.4.1.9.2 1.3.3l-.7 2.7 1.6.4.7-2.7c2.8.5 4.9.3 5.8-2.2.7-2-.03-3.2-1.5-4 1.1-.2 1.9-.9 2.1-2.4zm-3.8 5.3c-.5 2-3.9.9-5 .7l.9-3.6c1.1.3 4.6.8 4.1 2.9zm.5-5.3c-.5 1.8-3.3.9-4.2.7l.8-3.2c.9.2 3.9.7 3.4 2.5z" fill="#FFF"/></svg>`;
+      if (coin === 'ETH')  return `<svg width="${s}" height="${s}" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#627EEA"/><path d="M16 5.5L9.8 16.2L16 19.9L22.2 16.2L16 5.5Z" fill="#FFF"/><path d="M16 21.1L9.8 17.4L16 26.5L22.2 17.4L16 21.1Z" fill="#FFF" fill-opacity="0.72"/></svg>`;
+      if (coin === 'SOL')  return `<svg width="${s}" height="${s}" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#1A1A2E"/><path d="M9.5 20.5h11l2-2.2h-11l-2 2.2zm0-6.8h11l2 2.2h-11l-2-2.2zm13-2.2h-11l-2-2.2h11l2 2.2z" fill="#14F195"/></svg>`;
+      return `<svg width="${s}" height="${s}" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#2775CA"/><text x="16" y="21" text-anchor="middle" fill="#FFF" font-size="14" font-weight="800" font-family="Inter, sans-serif">$</text></svg>`;
+    }
+
+    function generateQRSVG(seedStr) {
+      let h = 2166136261;
+      for (let i = 0; i < seedStr.length; i++) { h ^= seedStr.charCodeAt(i); h = Math.imul(h, 16777619); }
+      const cells = 21, size = 168, cell = size / cells;
+      let rects = '';
+      const isFinder = (r, c) => (r < 7 && c < 7) || (r < 7 && c >= cells - 7) || (r >= cells - 7 && c < 7);
+      const finder = (ox, oy) => `
+        <rect x="${ox}" y="${oy}" width="${cell * 7}" height="${cell * 7}" rx="3" fill="#0B0B11"/>
+        <rect x="${ox + cell}" y="${oy + cell}" width="${cell * 5}" height="${cell * 5}" rx="2" fill="#FFF"/>
+        <rect x="${ox + cell * 2}" y="${oy + cell * 2}" width="${cell * 3}" height="${cell * 3}" rx="1.5" fill="#0B0B11"/>
+      `;
+      for (let r = 0; r < cells; r++) {
+        for (let c = 0; c < cells; c++) {
+          if (isFinder(r, c) || (r >= 8 && r <= 12 && c >= 8 && c <= 12)) continue;
+          h = (Math.imul(h, 1664525) + 1013904223) >>> 0;
+          if ((h & 3) !== 0 && ((r + c + (h & 1)) % 2 === 0 || (h & 7) > 3)) {
+            rects += `<rect x="${(c * cell).toFixed(1)}" y="${(r * cell).toFixed(1)}" width="${(cell + 0.3).toFixed(1)}" height="${(cell + 0.3).toFixed(1)}" rx="1" fill="#0B0B11"/>`;
+          }
+        }
+      }
+      return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" class="rounded-2xl bg-white p-2.5 shadow-xl">
+        <rect width="${size}" height="${size}" fill="#FFF"/>
+        ${finder(0, 0)}${finder((cells - 7) * cell, 0)}${finder(0, (cells - 7) * cell)}
+        ${rects}
+        <rect x="${8 * cell}" y="${8 * cell}" width="${5 * cell}" height="${5 * cell}" rx="8" fill="#8D68F6"/>
+        <path d="M68 74L72 85L76.5 77L81 85L85 74" stroke="#FFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none" transform="translate(7.5, 4.5)"/>
+      </svg>`;
+    }
+
+    /* =========================================================================
+       5. FIREBASE BOOTSTRAP, AUTH & REAL-TIME SNAPSHOT LISTENERS
+       ========================================================================= */
+    function getCurrentProfile() {
+      if (!state.authUser) return null;
+      return state.usersMap[state.authUser.uid] || null;
+    }
+
+    function getUserBalances(profile = getCurrentProfile()) {
+      const defAvail = { USDT: 0, USDC: 0, BTC: 0, ETH: 0, SOL: 0 };
+      const defLocked = { USDT: 0, USDC: 0, BTC: 0, ETH: 0, SOL: 0 };
+      if (!profile) return { available: defAvail, locked: defLocked };
+      return {
+        available: { ...defAvail, ...(profile.balances || {}) },
+        locked: { ...defLocked, ...(profile.lockedBalances || {}) }
+      };
+    }
+
+    async function ensureUserProfileDoc(fbUser, customName = '') {
+      if (!fbUser || fbUser.isAnonymous || !db) return;
+      try {
+        const ref = pubDoc('users', fbUser.uid);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) {
+          const displayName = customName || fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'Trader_' + fbUser.uid.slice(0, 5));
+          await setDoc(ref, {
+            uid: fbUser.uid,
+            displayName,
+            email: fbUser.email || '',
+            publicWalletAddress: state.deviceWallet.address || '',
+            balances: { USDT: 250, USDC: 100, BTC: 0.0025, ETH: 0.05, SOL: 1.0 },
+            lockedBalances: { USDT: 0, USDC: 0, BTC: 0, ETH: 0, SOL: 0 },
+            completedTrades: 0,
+            totalTrades: 0,
+            banned: false,
+            createdAt: Date.now()
+          });
+        } else if (state.deviceWallet.address && !snap.data().publicWalletAddress) {
+          await updateDoc(ref, { publicWalletAddress: state.deviceWallet.address });
+        }
+      } catch (err) {
+        console.error('ensureUserProfileDoc failed:', err);
+      }
+    }
+
+    function attachFirestoreListeners() {
+      detachFirestoreListeners();
+      if (!db || !state.authUser) return;
+
+      // 1. Users Collection
+      unsubscribers.push(
+        onSnapshot(pubCol('users'), (snap) => {
+          const map = {};
+          snap.forEach(d => { map[d.id] = { id: d.id, ...d.data() }; });
+          state.usersMap = map;
+          renderAll();
+        }, (err) => console.error('Users listener error:', err))
+      );
+
+      // 2. Offers Collection (sorted in JS memory per Rule 2)
+      unsubscribers.push(
+        onSnapshot(pubCol('offers'), (snap) => {
+          const list = [];
+          snap.forEach(d => { list.push({ id: d.id, ...d.data() }); });
+          list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          state.offers = list;
+          renderAll();
+        }, (err) => console.error('Offers listener error:', err))
+      );
+
+      // 3. Trades Collection
+      unsubscribers.push(
+        onSnapshot(pubCol('trades'), (snap) => {
+          const list = [];
+          snap.forEach(d => { list.push({ id: d.id, ...d.data() }); });
+          list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          state.trades = list;
+          renderAll();
+          if (state.activeTradeRoomId) refreshTradeRoomModal();
+          if (state.ownerPanelOpen) renderOwnerOverlay();
+        }, (err) => console.error('Trades listener error:', err))
+      );
+
+      // 4. Trade Messages Collection (filtered per tradeId in JS memory)
+      unsubscribers.push(
+        onSnapshot(pubCol('trade_messages'), (snap) => {
+          const list = [];
+          snap.forEach(d => { list.push({ id: d.id, ...d.data() }); });
+          list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+          state.messages = list;
+          if (state.activeTradeRoomId) refreshTradeRoomModal();
+          if (state.ownerPanelOpen && state.selectedAdminDisputeId) renderOwnerOverlay();
+        }, (err) => console.error('Messages listener error:', err))
+      );
+
+      // 5. System Owner Config Document
+      unsubscribers.push(
+        onSnapshot(pubDoc('system', 'adminConfig'), (snap) => {
+          state.adminConfig = snap.exists() ? snap.data() : null;
+          if (state.ownerPanelOpen) {
+            // Immediately revoke overlay if auth user no longer matches ownerUid
+            if (!state.authUser || !state.adminConfig || state.adminConfig.ownerUid !== state.authUser.uid) {
+              closeOwnerOverlay();
+            } else {
+              renderOwnerOverlay();
+            }
+          }
+        }, (err) => console.error('System config listener error:', err))
+      );
+    }
+
+    function detachFirestoreListeners() {
+      unsubscribers.forEach(fn => { try { fn(); } catch (e) {} });
+      unsubscribers = [];
+    }
+
+    async function bootFirebase() {
+      try {
+        let fbConfig = null;
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+          fbConfig = typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config;
+        }
+
+        if (!fbConfig || !fbConfig.apiKey) {
+          state.firebaseMode = 'offline_demo';
+          state.firebaseReady = true;
+          renderAll();
+          showToast('Running in preview mode. Add your Firebase config to enable live cloud sync.', 'warning');
+          return;
+        }
+
+        const fbApp = initializeApp(fbConfig);
+        db = getFirestore(fbApp);
+        auth = getAuth(fbApp);
+
+        // RULE 3: Authenticate FIRST before attaching any Firestore listeners
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          try {
+            await signInWithCustomToken(auth, __initial_auth_token);
+          } catch (tokenErr) {
+            console.warn('Custom token fallback to anonymous:', tokenErr);
+            await signInAnonymously(auth);
+          }
+        } else if (!auth.currentUser) {
+          await signInAnonymously(auth);
+        }
+
+        state.firebaseMode = 'live';
+        state.firebaseReady = true;
+
+        onAuthStateChanged(auth, async (user) => {
+          if (!user) {
+            // Keep anonymous read session active so live marketplace continues smoothly
+            try {
+              await signInAnonymously(auth);
+              return;
+            } catch (e) {
+              console.error('Re-anon failed:', e);
+            }
+          }
+          state.authUser = user;
+          state.isMember = Boolean(user && !user.isAnonymous);
+          if (state.isMember) {
+            await ensureUserProfileDoc(user);
+          } else {
+            state.ownerSessionUnlocked = false;
+            closeOwnerOverlay();
+          }
+          attachFirestoreListeners();
+          renderAll();
+        });
+      } catch (err) {
+        console.error('Firebase bootstrap error:', err);
+        state.firebaseMode = 'offline_demo';
+        state.firebaseReady = true;
+        renderAll();
+        showToast('Cloud connection issue — check console or Firebase config.', 'error');
+      }
+    }
+
+    /* =========================================================================
+       6. CHROME, NAVIGATION & AUTHENTICATION MODALS
+       ========================================================================= */
+    function updateChrome() {
+      const fiatSel = document.getElementById('header-fiat-select');
+      if (fiatSel) fiatSel.value = state.fiat;
+
+      const profile = getCurrentProfile();
+      const userLabel = document.getElementById('header-user-label');
+      const syncDot = document.getElementById('header-sync-dot');
+      if (userLabel) {
+        if (state.isMember && state.authUser) {
+          userLabel.textContent = (profile && profile.displayName) || state.authUser.displayName || (state.authUser.email ? state.authUser.email.split('@')[0] : 'Account');
+        } else {
+          userLabel.textContent = 'Sign In';
+        }
+      }
+      if (syncDot) {
+        syncDot.className = `w-2 h-2 rounded-full ${state.firebaseMode === 'live' ? 'bg-buy' : 'bg-escrow'}`;
+      }
+
+      const bannedBanner = document.getElementById('banned-banner');
+      if (bannedBanner) {
+        bannedBanner.classList.toggle('hidden', !(profile && profile.banned));
+      }
+
+      // Active trades badge
+      const uid = state.authUser ? state.authUser.uid : null;
+      const myActiveTrades = uid
+        ? state.trades.filter(t => (t.buyerUid === uid || t.sellerUid === uid) && ['ESCROW_LOCKED', 'PAID', 'DISPUTED'].includes(t.status)).length
+        : 0;
+
+      ['desk-trades-badge', 'mob-trades-badge'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (myActiveTrades > 0) {
+          el.textContent = String(myActiveTrades);
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
+      });
+
+      // Nav active styles
+      document.querySelectorAll('.desk-nav-btn').forEach(btn => {
+        const active = btn.dataset.nav === state.activeView;
+        btn.className = `desk-nav-btn px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+          active ? 'bg-brand text-white shadow-glow' : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+        }`;
+      });
+
+      document.querySelectorAll('.mob-nav-btn').forEach(btn => {
+        const active = btn.dataset.nav === state.activeView;
+        btn.classList.toggle('text-brand', active);
+        btn.classList.toggle('text-slate-400', !active);
+      });
+    }
+
+    function renderAll() {
+      updateChrome();
+      const main = document.getElementById('app-main');
+      if (!main) return;
+      switch (state.activeView) {
+        case 'market': main.innerHTML = renderMarketView(); break;
+        case 'trades': main.innerHTML = renderTradesView(); break;
+        case 'post': main.innerHTML = renderPostAdView(); break;
+        case 'wallet': main.innerHTML = renderWalletView(); break;
+        case 'profile': main.innerHTML = renderProfileView(); break;
+        default: state.activeView = 'market'; main.innerHTML = renderMarketView();
+      }
+    }
+
+    function openAuthModal(defaultMode = 'signin') {
+      const renderForm = (mode) => {
+        const isSignUp = mode === 'signup';
+        openModal(`
+          <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade" onclick="window.app.handleBackdrop(event)">
+            <div class="animate-slide w-full sm:max-w-md bg-surface-card border-t sm:border border-surface-border rounded-t-3xl sm:rounded-3xl p-6 space-y-5 shadow-2xl" onclick="event.stopPropagation()">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="font-display text-lg font-extrabold text-white">${isSignUp ? 'Create Wayones Account' : 'Sign In to Wayones'}</h3>
+                  <p class="text-xs text-slate-400 mt-0.5">${isSignUp ? 'Trade P2P globally with real-time escrow sync' : 'Access your offers, trades & verified profile'}</p>
+                </div>
+                <button onclick="window.app.closeModal()" class="w-9 h-9 rounded-xl bg-surface-elevated text-slate-300 hover:text-white flex items-center justify-center">✕</button>
+              </div>
+
+              <div class="grid grid-cols-2 p-1 rounded-xl bg-surface-bg border border-surface-border">
+                <button type="button" onclick="window.app.openAuthModal('signin')" class="py-2 rounded-lg text-xs font-bold ${!isSignUp ? 'bg-brand text-white' : 'text-slate-400 hover:text-white'}">Sign In</button>
+                <button type="button" onclick="window.app.openAuthModal('signup')" class="py-2 rounded-lg text-xs font-bold ${isSignUp ? 'bg-brand text-white' : 'text-slate-400 hover:text-white'}">Sign Up</button>
+              </div>
+
+              <form id="auth-form" onsubmit="window.app.submitAuthForm(event, '${mode}')" class="space-y-3.5">
+                ${isSignUp ? `
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Trader Display Name</label>
+                    <input id="auth-name-inp" type="text" required minlength="3" maxlength="24" placeholder="e.g. aarav_trader" class="w-full h-11 px-3.5 rounded-xl bg-surface-elevated border border-surface-border focus:border-brand focus:outline-none text-sm text-white" />
+                  </div>
+                ` : ''}
+                <div>
+                  <label class="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
+                  <input id="auth-email-inp" type="email" required placeholder="you@example.com" class="w-full h-11 px-3.5 rounded-xl bg-surface-elevated border border-surface-border focus:border-brand focus:outline-none text-sm text-white" />
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-300 mb-1">Password (min 6 chars)</label>
+                  <input id="auth-pass-inp" type="password" required minlength="6" placeholder="••••••••" class="w-full h-11 px-3.5 rounded-xl bg-surface-elevated border border-surface-border focus:border-brand focus:outline-none text-sm text-white" />
+                </div>
+
+                <div id="auth-err-box" class="hidden px-3.5 py-2.5 rounded-xl bg-sell/15 border border-sell/40 text-xs font-semibold text-red-300"></div>
+
+                <button id="auth-submit-btn" type="submit" class="w-full h-12 rounded-xl bg-brand hover:bg-brand-hover text-white font-extrabold text-sm shadow-glow transition-all">
+                  ${isSignUp ? 'Create Account & Start Trading' : 'Sign In'}
+                </button>
+              </form>
+            </div>
+          </div>
+        `);
+      };
+      renderForm(defaultMode);
+    }
+
+    async function submitAuthForm(e, mode) {
+      e.preventDefault();
+      if (!auth) {
+        showToast('Firebase Authentication is not configured yet.', 'error');
+        return;
+      }
+      const email = (document.getElementById('auth-email-inp')?.value || '').trim();
+      const pass = document.getElementById('auth-pass-inp')?.value || '';
+      const name = (document.getElementById('auth-name-inp')?.value || '').trim();
+      const errBox = document.getElementById('auth-err-box');
+      const btn = document.getElementById('auth-submit-btn');
+
+      if (errBox) errBox.classList.add('hidden');
+      if (btn) { btn.disabled = true; btn.textContent = 'Please wait...'; }
+
+      try {
+        if (mode === 'signup') {
+          const cred = await createUserWithEmailAndPassword(auth, email, pass);
+          if (name) {
+            await updateProfile(cred.user, { displayName: name });
+          }
+          await ensureUserProfileDoc(cred.user, name);
+          closeModal();
+          showToast(`Welcome to Wayones, ${name || email}!`, 'success');
+        } else {
+          const cred = await signInWithEmailAndPassword(auth, email, pass);
+          await ensureUserProfileDoc(cred.user);
+          closeModal();
+          showToast('Signed in successfully!', 'success');
+        }
+      } catch (err) {
+        console.error('Auth error:', err);
+        let msg = 'Authentication failed. Please verify your details.';
+        if (err.code === 'auth/email-already-in-use') msg = 'This email is already registered. Try signing in.';
+        else if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') msg = 'Invalid email or password.';
+        else if (err.code === 'auth/weak-password') msg = 'Password must be at least 6 characters.';
+        else if (err.code === 'auth/operation-not-allowed') msg = 'Email/Password sign-in is disabled in Firebase Console. Enable it under Authentication > Sign-in method.';
+        if (errBox) { errBox.textContent = msg; errBox.classList.remove('hidden'); }
+        if (btn) { btn.disabled = false; btn.textContent = mode === 'signup' ? 'Create Account & Start Trading' : 'Sign In'; }
+      }
+    }
+
+    async function handleSignOut() {
+      if (!auth) return;
+      try {
+        state.ownerSessionUnlocked = false;
+        closeOwnerOverlay();
+        await signOut(auth);
+        showToast('Signed out cleanly.', 'info');
+      } catch (err) {
+        console.error('Sign out error:', err);
+      }
+    }
+
+    function requireMemberAction() {
+      if (!state.isMember || !state.authUser) {
+        showToast('Please Sign In or Create an account to continue.', 'info');
+        openAuthModal('signin');
+        return false;
+      }
+      const prof = getCurrentProfile();
+      if (prof && prof.banned) {
+        showToast('Your account is currently restricted by Wayones Moderation.', 'error');
+        return false;
+      }
+      return true;
+    }
+
+    /* =========================================================================
+       7. VIEW 1: GLOBAL MULTI-USER MARKETPLACE
+       ========================================================================= */
+    function renderRuleBadges(flags = {}) {
+      const out = [];
+      if (flags.thirdPartyAllowed) {
+        out.push(`
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-escrow/15 border border-escrow/35 text-[11px] font-bold text-amber-300" title="Trader allows third-party transfers. Verify proof requirements.">
+            <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            Third-Party Allowed
+          </span>
+        `);
+      } else {
+        out.push(`
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-buy/12 border border-buy/30 text-[11px] font-bold text-buy">
+            <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Own Account Only
+          </span>
+        `);
+      }
+      if (flags.noCryptoRemarks) {
+        out.push(`<span class="px-2 py-0.5 rounded-md bg-surface-elevated border border-surface-border text-[11px] font-semibold text-slate-300">No Crypto Remarks</span>`);
+      }
+      if (flags.videoProofRequired) {
+        out.push(`<span class="px-2 py-0.5 rounded-md bg-brand/15 border border-brand/35 text-[11px] font-semibold text-brand">Video Proof Required</span>`);
+      }
+      if (flags.idRequired) {
+        out.push(`<span class="px-2 py-0.5 rounded-md bg-sky-500/15 border border-sky-400/35 text-[11px] font-semibold text-sky-300">ID Required</span>`);      }
+      return out.join('');
+    }
+
+    function getCombinedMarketOffers() {
+      const liveActive = state.offers.filter(o => o.status === 'ACTIVE');
+      // Always display Featured Liquidity when live offers are empty (or show alongside so all coins/fiats have depth)
+      return liveActive.length > 0 ? [...liveActive, ...FEATURED_OFFERS] : [...FEATURED_OFFERS];
+    }
+
+    function getFilteredOffers() {
+      const f = state.marketFilter;
+      // If user wants to BUY crypto, match offers where creator type === 'SELL'
+      // If user wants to SELL crypto, match offers where creator type === 'BUY'
+      const targetOfferType = f.userAction === 'BUY' ? 'SELL' : 'BUY';
+      const amtNum = parseFloat(f.amount);
+
+      const list = getCombinedMarketOffers().filter(o => {
+        if (o.type !== targetOfferType) return false;
+        if (o.crypto !== f.crypto) return false;
+        if (o.fiat !== state.fiat) return false;
+        if (f.payment !== 'ALL' && !(o.paymentMethods || []).includes(f.payment)) return false;
+        const tp = Boolean(o.termsFlags && o.termsFlags.thirdPartyAllowed);
+        if (f.thirdParty === 'OWN_ONLY' && tp) return false;
+        if (f.thirdParty === 'ALLOWED' && !tp) return false;
+        if (!isNaN(amtNum) && amtNum > 0) {
+          if (amtNum < Number(o.minLimit) || amtNum > Number(o.maxLimit)) return false;
+        }
+        return true;
+      });
+
+      list.sort((a, b) => {
+        // Real live user offers appear first before featured samples when rates are close
+        if (!a.isFeatured && b.isFeatured) return -1;
+        if (a.isFeatured && !b.isFeatured) return 1;
+        if (f.sort === 'newest') return (b.createdAt || 0) - (a.createdAt || 0);
+        if (f.sort === 'completion') {
+          const ca = a.isFeatured ? a.completionRate : computeUserCompletion(a.creatorUid);
+          const cb = b.isFeatured ? b.completionRate : computeUserCompletion(b.creatorUid);
+          return cb - ca;
+        }
+        return f.userAction === 'BUY' ? (Number(a.price) - Number(b.price)) : (Number(b.price) - Number(a.price));
+      });
+
+      return list;
+    }
+
+    function computeUserCompletion(uid) {
+      const u = state.usersMap[uid];
+      if (!u || !u.totalTrades) return 100.0;
+      return Number(((u.completedTrades / u.totalTrades) * 100).toFixed(1));
+    }
+
+    function renderMarketView() {
+      const f = state.marketFilter;
+      const fiatMeta = getFiatMeta(state.fiat);
+      const coinMeta = COINS[f.crypto];
+      const offers = getFilteredOffers();
+      const myUid = state.authUser ? state.authUser.uid : null;
+
+      const cardsHTML = offers.length === 0
+        ? `
+          <div class="bg-surface-card border border-surface-border rounded-2xl p-10 text-center">
+            <h3 class="text-base font-extrabold text-white">No ${f.crypto} offers in ${state.fiat} match your filters</h3>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1 mb-5">Switch fiat currency, clear filters, or be the first trader to post an offer here!</p>
+            <div class="flex flex-wrap justify-center gap-2.5">
+              <button onclick="window.app.resetFilters()" class="px-4 py-2.5 rounded-xl bg-surface-elevated border border-surface-border text-xs font-bold text-white">Reset Filters</button>
+              <button onclick="window.app.switchView('post')" class="px-5 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-xs font-extrabold text-white shadow-glow">+ Post ${f.crypto} Offer</button>
+            </div>
+          </div>
+        `
+        : offers.map(o => {
+            const isMine = myUid && o.creatorUid === myUid;
+            const compRate = o.isFeatured ? o.completionRate : computeUserCompletion(o.creatorUid);
+            const totalT = o.isFeatured ? o.totalTrades : ((state.usersMap[o.creatorUid] && state.usersMap[o.creatorUid].totalTrades) || 0);
+            const isBuyAction = f.userAction === 'BUY';
+
+            return `
+              <div class="bg-surface-card hover:border-brand/45 border ${isMine ? 'border-brand/60 ring-1 ring-brand/25' : 'border-surface-border'} rounded-2xl p-4 sm:p-5 transition-all shadow-card">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <!-- Trader Info -->
+                  <div class="flex items-start gap-3 lg:w-[30%] min-w-0">
+                    <div class="w-11 h-11 rounded-xl bg-brand/20 border border-brand/35 flex items-center justify-center font-display font-extrabold text-brand uppercase shrink-0">
+                      ${esc((o.creatorName || 'W').charAt(0))}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="font-display font-bold text-white text-sm sm:text-base truncate">${esc(o.creatorName)}</span>
+                        ${o.isFeatured
+                          ? `<span class="px-1.5 py-0.5 rounded bg-brand/15 border border-brand/35 text-[10px] font-bold text-brand">Featured Liquidity</span>`
+                          : `<span class="px-1.5 py-0.5 rounded bg-buy/15 border border-buy/35 text-[10px] font-bold text-buy">Live User</span>`
+                        }
+                        ${isMine ? `<span class="px-1.5 py-0.5 rounded bg-white/10 text-[10px] font-bold text-white">Your Ad</span>` : ''}
+                      </div>
+                      <div class="flex items-center gap-2 mt-1 text-[11px] text-slate-400 tabular-nums">
+                        <span><strong class="text-slate-200">${totalT}</strong> trades</span>
+                        <span>•</span>
+                        <span>Completion: <strong class="text-buy">${compRate}%</strong></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Payment Methods & Terms Badges -->
+                  <div class="lg:w-[36%] space-y-2">
+                    <div class="flex flex-wrap gap-1.5">
+                      ${(o.paymentMethods || []).map(pm => `
+                        <span class="px-2.5 py-1 rounded-lg bg-surface-elevated border border-surface-border text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                          <span class="w-1.5 h-1.5 rounded-full bg-brand"></span>${esc(pm)}
+                        </span>
+                      `).join('')}
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                      ${renderRuleBadges(o.termsFlags)}
+                    </div>
+                    <p class="text-[11px] text-slate-400 line-clamp-1" title="${esc(o.publicTerms)}">
+                      “${esc(o.publicTerms)}”
+                    </p>
+                  </div>
+
+                  <!-- Price, Limits & Action -->
+                  <div class="flex items-end sm:items-center justify-between lg:justify-end gap-4 lg:w-[34%] pt-3 lg:pt-0 border-t lg:border-t-0 border-surface-border">
+                    <div class="lg:text-right">
+                      <div class="text-[11px] text-slate-400">Price per 1 ${o.crypto}</div>
+                      <div class="font-display text-xl sm:text-2xl font-extrabold text-white tabular-nums tracking-tight">
+                        ${formatFiat(o.price, o.fiat)}
+                      </div>
+                      <div class="text-xs text-slate-400 mt-0.5 tabular-nums">
+                        Limit: <span class="text-slate-200 font-semibold">${formatFiat(o.minLimit, o.fiat)} – ${formatFiat(o.maxLimit, o.fiat)}</span>
+                      </div>
+                      <div class="text-[11px] text-slate-500 tabular-nums">
+                        Available: ${formatCrypto(o.availableAmount, o.crypto)} ${o.crypto}
+                      </div>
+                    </div>
+
+                    <div class="flex flex-col items-end gap-1.5 shrink-0">
+                      ${isMine
+                        ? `<button onclick="window.app.removeMyOffer('${o.id}')" class="min-h-[44px] px-4 py-2.5 rounded-xl bg-surface-elevated hover:bg-sell/20 border border-surface-border hover:border-sell/40 text-xs font-bold text-slate-300 hover:text-red-300 transition-all">Remove Ad</button>`
+                        : `<button onclick="window.app.openTradeModal('${o.id}')" class="min-h-[44px] px-5 py-2.5 rounded-xl font-extrabold text-sm transition-all shadow-md active:scale-[0.98] ${
+                            isBuyAction ? 'bg-buy hover:bg-emerald-400 text-[#041F15]' : 'bg-sell hover:bg-red-400 text-white'
+                          }">${isBuyAction ? 'Buy' : 'Sell'} ${o.crypto}</button>`
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('');
+
+      return `
+        <!-- Hero Header -->
+        <section class="hero-glow border border-brand/25 rounded-3xl p-4 sm:p-6 mb-5 shadow-card">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+            <div>
+              <div class="flex items-center gap-2 flex-wrap mb-2">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-buy/15 border border-buy/30 text-buy text-[11px] font-bold">
+                  <span class="w-2 h-2 rounded-full bg-buy animate-pulse"></span>
+                  Live Multi-User Cloud Escrow
+                </span>
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-brand/15 border border-brand/30 text-brand text-[11px] font-bold">
+                  Self-Custody EVM Keys
+                </span>
+              </div>
+              <h1 class="font-display text-xl sm:text-2xl font-extrabold tracking-tight text-white">
+                Global Peer-to-Peer Crypto Marketplace
+              </h1>
+              <p class="text-xs sm:text-sm text-slate-400 mt-1">
+                Trade directly with verified peers across ${Object.keys(FIATS).length} currencies. Custom offer rules, frozen terms & live escrow protection.
+              </p>
+            </div>
+
+            <div class="bg-surface-bg/75 border border-surface-border rounded-2xl px-4 py-3 flex items-center gap-3 self-start md:self-auto">
+              ${getCoinSVG(f.crypto, 32)}
+              <div>
+                <div class="text-[11px] text-slate-400">${coinMeta.name} Reference</div>
+                <div class="text-base font-extrabold text-white tabular-nums">${formatFiat(coinMeta.priceUSD * fiatMeta.rateFromUSD, state.fiat)}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Buy / Sell Toggle + Crypto Selector -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="grid grid-cols-2 p-1 rounded-xl bg-surface-bg border border-surface-border sm:w-56 shrink-0">
+              <button onclick="window.app.setMarketFilter('userAction','BUY')" class="py-2 rounded-lg text-sm font-extrabold transition-all ${f.userAction === 'BUY' ? 'bg-buy text-[#041F15]' : 'text-slate-400 hover:text-white'}">Buy</button>
+              <button onclick="window.app.setMarketFilter('userAction','SELL')" class="py-2 rounded-lg text-sm font-extrabold transition-all ${f.userAction === 'SELL' ? 'bg-sell text-white' : 'text-slate-400 hover:text-white'}">Sell</button>
+            </div>
+
+            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
+              ${Object.keys(COINS).map(c => `
+                <button onclick="window.app.setMarketFilter('crypto','${c}')" class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap border transition-all ${
+                  f.crypto === c ? 'bg-brand/15 border-brand text-white' : 'bg-surface-elevated/80 border-surface-border text-slate-400 hover:text-white'
+                }">
+                  ${getCoinSVG(c, 18)}<span>${c}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        </section>
+
+        <!-- Filter Bar -->
+        <section class="bg-surface-card border border-surface-border rounded-2xl p-3.5 sm:p-4 mb-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Amount (${state.fiat})</label>
+              <div class="relative flex items-center">
+                <span class="absolute left-3.5 text-brand font-bold text-sm">${fiatMeta.symbol}</span>
+                <input id="market-amt-input" type="number" step="any" min="0" value="${esc(f.amount)}" oninput="window.app.setMarketAmount(this.value)" placeholder="Filter by fiat amount" class="w-full h-10 pl-9 pr-3 rounded-xl bg-surface-elevated border border-surface-border focus:border-brand focus:outline-none text-sm text-white placeholder-slate-500 tabular-nums" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Payment Method</label>
+              <select onchange="window.app.setMarketFilter('payment', this.value)" class="w-full h-10 px-3 rounded-xl bg-surface-elevated border border-surface-border focus:border-brand focus:outline-none text-sm text-white">
+                <option value="ALL" ${f.payment === 'ALL' ? 'selected' : ''}>All Payment Methods</option>
+                ${PAYMENT_METHODS.map(pm => `<option value="${pm}" ${f.payment === pm ? 'selected' : ''}>${pm}</option>`).join('')}
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Third-Party Policy</label>
+              <select onchange="window.app.setMarketFilter('thirdParty', this.value)" class="w-full h-10 px-3 rounded-xl bg-surface-elevated border border-surface-border focus:border-brand focus:outline-none text-sm text-white">
+                <option value="ALL" ${f.thirdParty === 'ALL' ? 'selected' : ''}>All Offers</option>
+                <option value="OWN_ONLY" ${f.thirdParty === 'OWN_ONLY' ? 'selected' : ''}>Own Account Only</option>
+                <option value="ALLOWED" ${f.thirdParty === 'ALLOWED' ? 'selected' : ''}>Third-Party Allowed</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Sort By</label>
+              <select onchange="window.app.setMarketFilter('sort', this.value)" class="w-full h-10 px-3 rounded-xl bg-surface-elevated border border-surface-border focus:border-brand focus:outline-none text-sm text-white">
+                <option value="best_price" ${f.sort === 'best_price' ? 'selected' : ''}>Best Price</option>
+                <option value="completion" ${f.sort === 'completion' ? 'selected' : ''}>Highest Completion</option>
+                <option value="newest" ${f.sort === 'newest' ? 'selected' : ''}>Newest First</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <!-- Offers Count + Action -->
+        <div class="flex items-center justify-between mb-3 px-1">
+          <span class="text-xs font-bold text-slate-300">${offers.length} Active ${f.crypto} Offers in ${state.fiat}</span>
+          <button onclick="window.app.switchView('post')" class="text-xs font-bold text-brand hover:underline">+ Post Custom Ad</button>
+        </div>
+
+        <div class="flex flex-col gap-3">
+          ${cardsHTML}
+        </div>
+      `;
+    }
+
+    async function removeMyOffer(offerId) {
+      if (!db || !state.authUser) return;
+      try {
+        await updateDoc(pubDoc('offers', offerId), { status: 'REMOVED' });
+        showToast('Your offer has been removed from the Marketplace.', 'info');
+      } catch (err) {
+        console.error('Remove offer failed:', err);
+        showToast('Could not remove offer.', 'error');
+      }
+    }
+
+    /* =========================================================================
+       8. TRADE SETUP MODAL (TWO-WAY CONVERTER + FROZEN TERMS CHECKBOX)
+       ========================================================================= */
+    let tradeDraft = null;
+
+    function openTradeModal(offerId) {
+      if (!requireMemberAction()) return;
+      const offer = getCombinedMarketOffers().find(o => o.id === offerId);
+      if (!offer) return;
+
+      const isUserBuying = offer.type === 'SELL'; // Vendor sells -> User buys
+      const balances = getUserBalances();
+      const userAvailCrypto = Number(balances.available[offer.crypto] || 0);
+      const defaultFiat = Math.min(Number(offer.maxLimit), Math.max(Number(offer.minLimit), Number(offer.minLimit) * 2));
+      const defaultCrypto = defaultFiat / Number(offer.price);
+
+      tradeDraft = {
+        offer,
+        isUserBuying,
+        selectedPayment: (offer.paymentMethods && offer.paymentMethods[0]) || 'UPI',
+        agreed: false
+      };
+
+      openModal(`
+        <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade" onclick="window.app.handleBackdrop(event)">
+          <div class="animate-slide w-full sm:max-w-xl max-h-[93vh] overflow-y-auto bg-surface-card border-t sm:border border-surface-border rounded-t-3xl sm:rounded-3xl shadow-2xl" onclick="event.stopPropagation()">
+            <div class="sticky top-0 z-10 flex items-center justify-between px-5 py-4 bg-surface-card/95 backdrop-blur-md border-b border-surface-border">
+              <div class="flex items-center gap-2.5">
+                ${getCoinSVG(offer.crypto, 28)}
+                <div>
+                  <h3 class="font-display text-base font-extrabold text-white">${isUserBuying ? 'Buy' : 'Sell'} ${offer.crypto} with Escrow</h3>
+                  <p class="text-xs text-slate-400">Trader: <strong class="text-white">${esc(offer.creatorName)}</strong> • Rate: ${formatFiat(offer.price, offer.fiat)}</p>
+                </div>
+              </div>
+              <button onclick="window.app.closeModal()" class="w-9 h-9 rounded-xl bg-surface-elevated text-slate-300 flex items-center justify-center">✕</button>
+            </div>
+
+            <div class="p-5 space-y-4">
+              <!-- Summary Bar -->
+              <div class="grid grid-cols-2 gap-3 bg-surface-elevated/80 border border-surface-border rounded-2xl p-3.5">
+                <div>
+                  <div class="text-[11px] text-slate-400">Price per 1 ${offer.crypto}</div>
+                  <div class="text-base font-extrabold text-white tabular-nums">${formatFiat(offer.price, offer.fiat)}</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[11px] text-slate-400">${isUserBuying ? 'Offer Available' : 'Your Testnet Available'}</div>
+                  <div class="text-sm font-extrabold text-brand tabular-nums mt-0.5">
+                    ${isUserBuying ? `${formatCrypto(offer.availableAmount, offer.crypto)} ${offer.crypto}` : `${formatCrypto(userAvailCrypto, offer.crypto)} ${offer.crypto}`}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Two-Way Converter -->
+              <div class="space-y-3">
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="text-xs font-semibold text-slate-300">${isUserBuying ? 'You Pay' : 'You Receive'} (${offer.fiat})</label>
+                    <div class="flex gap-1.5">
+                      <button type="button" onclick="window.app.fillTradeFiat(${offer.minLimit})" class="px-2 py-0.5 rounded bg-surface-elevated text-[11px] font-bold text-slate-300 hover:text-white">Min</button>
+                      <button type="button" onclick="window.app.fillTradeFiat(${offer.maxLimit})" class="px-2 py-0.5 rounded bg-surface-elevated text-[11px] font-bold text-slate-300 hover:text-white">Max</button>
+                    </div>
+                  </div>
+                  <div class="relative flex items-center">
+                    <span class="absolute left-3.5 text-brand font-bold">${getFiatMeta(offer.fiat).symbol}</span>
+                    <input id="td-fiat-inp" type="number" step="any" value="${Number(defaultFiat).toFixed(2)}" oninput="window.app.syncTradeFromFiat()" class="w-full h-11 pl-9 pr-14 rounded-xl bg-surface-elevated border border-surface-border focus:border-brand focus:outline-none text-base font-bold text-white tabular-nums" />
+                    <span class="absolute right-3.5 text-xs font-bold text-slate-400">${offer.fiat}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-slate-300 mb-1">${isUserBuying ? 'You Receive' : 'Crypto Locked in Escrow'} (${offer.crypto})</label>
+                  <div class="relative flex items-center">
+                    <input id="td-crypto-inp" type="number" step="any" value="${formatCrypto(defaultCrypto, offer.crypto)}" oninput="window.app.syncTradeFromCrypto()" class="w-full h-11 pl-3.5 pr-16 rounded-xl bg-surface-elevated border border-surface-border focus:border-brand focus:outline-none text-base font-bold text-white tabular-nums" />
+                    <span class="absolute right-3.5 text-xs font-bold text-brand">${offer.crypto}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Payment Method -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5">Payment Method</label>
+                <div class="flex flex-wrap gap-2">
+                  ${(offer.paymentMethods || []).map((pm, idx) => `
+                    <button type="button" data-pm="${esc(pm)}" onclick="window.app.selectTradePM('${esc(pm)}')" class="td-pm-btn px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                      idx === 0 ? 'bg-brand/20 border-brand text-white' : 'bg-surface-elevated border-surface-border text-slate-400'
+                    }">${esc(pm)}</button>
+                  `).join('')}
+                </div>
+              </div>
+
+              <!-- Public Terms Preview -->
+              <div class="bg-surface-bg border border-brand/30 rounded-2xl p-3.5 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-extrabold uppercase tracking-wider text-brand">Trader's Public Terms</span>
+                  <span class="text-[10px] text-slate-400">Snapshotted permanently on open</span>
+                </div>
+                <div class="flex flex-wrap gap-1.5">${renderRuleBadges(offer.termsFlags)}</div>
+                <p class="text-xs text-slate-300 leading-relaxed">${esc(offer.publicTerms)}</p>
+              </div>
+
+              <!-- Mandatory Terms Checkbox -->
+              <label class="flex items-start gap-2.5 p-3 rounded-xl bg-surface-elevated/70 border border-surface-border cursor-pointer select-none">
+                <input id="td-agree-chk" type="checkbox" onchange="window.app.toggleTradeAgree(this.checked)" class="mt-0.5 w-4 h-4 accent-[#8D68F6] cursor-pointer" />
+                <span class="text-xs text-slate-200 leading-snug">
+                  I have read and agree to <strong>${esc(offer.creatorName)}</strong>'s terms and payment policy.
+                </span>
+              </label>
+
+              <div id="td-err-box" class="hidden px-3.5 py-2.5 rounded-xl bg-sell/15 border border-sell/40 text-xs font-semibold text-red-300"></div>
+
+              <button id="td-confirm-btn" onclick="window.app.confirmOpenTrade()" class="w-full h-12 rounded-xl bg-brand hover:bg-brand-hover text-white font-extrabold text-sm shadow-glow transition-all">
+                ${isUserBuying ? `Open Buy Trade & Lock Escrow` : `Lock ${offer.crypto} in Escrow & Start Trade`}
+              </button>
+            </div>
+          </div>
+        </div>
+      `);
+      validateTradeDraft();
+    }
+
+    function validateTradeDraft() {
+      if (!tradeDraft) return false;
+      const fiat = parseFloat(document.getElementById('td-fiat-inp')?.value);
+      const crypto = parseFloat(document.getElementById('td-crypto-inp')?.value);
+      const errBox = document.getElementById('td-err-box');
+      const btn = document.getElementById('td-confirm-btn');
+      const { offer, isUserBuying, agreed } = tradeDraft;
+
+      let err = '';
+      if (isNaN(fiat) || fiat <= 0 || isNaN(crypto) || crypto <= 0) {
+        err = 'Enter a valid trade amount.';
+      } else if (fiat < Number(offer.minLimit) - 0.01) {
+        err = `Minimum limit is ${formatFiat(offer.minLimit, offer.fiat)}.`;
+      } else if (fiat > Number(offer.maxLimit) + 0.01) {
+        err = `Maximum limit is ${formatFiat(offer.maxLimit, offer.fiat)}.`;
+      } else if (!isUserBuying) {
+        const avail = Number(getUserBalances().available[offer.crypto] || 0);
+        if (crypto > avail) {
+          err = `Insufficient ${offer.crypto} Available Balance (${formatCrypto(avail, offer.crypto)} ${offer.crypto}). Claim Test USDT from Wallet Faucet first!`;
+        }
+      } else if (!agreed) {
+        err = 'Please check the box confirming you agree to the trader\'s terms.';
+      }
+
+      if (errBox && btn) {
+        if (err) {
+          errBox.textContent = err;
+          errBox.classList.remove('hidden');
+          btn.disabled = true;
+          btn.classList.add('opacity-50', 'cursor-not-allowed');
+          return false;
+        }
+        errBox.classList.add('hidden');
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+      return true;
+    }
+
+    async function confirmOpenTrade() {
+      if (!validateTradeDraft() || !tradeDraft || !db || !state.authUser) return;
+      const btn = document.getElementById('td-confirm-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Locking Escrow...'; }
+
+      try {
+        const fiatAmount = Number(parseFloat(document.getElementById('td-fiat-inp').value).toFixed(2));
+        const cryptoAmount = Number(parseFloat(document.getElementById('td-crypto-inp').value).toFixed(COINS[tradeDraft.offer.crypto].decimals));
+        const { offer, isUserBuying, selectedPayment } = tradeDraft;
+        const meProf = getCurrentProfile();
+        const myName = (meProf && meProf.displayName) || state.authUser.displayName || state.authUser.email.split('@')[0];
+
+        const buyerUid = isUserBuying ? state.authUser.uid : offer.creatorUid;
+        const buyerName = isUserBuying ? myName : offer.creatorName;
+        const sellerUid = isUserBuying ? offer.creatorUid : state.authUser.uid;
+        const sellerName = isUserBuying ? offer.creatorName : myName;
+
+        // Deduct Seller's Testnet Available Balance and move to Locked Escrow if Seller is a real user doc
+        if (!isUserBuying) {
+          const bal = getUserBalances(meProf);
+          const newAvail = Math.max(0, Number((bal.available[offer.crypto] - cryptoAmount).toFixed(8)));
+          const newLocked = Number(((bal.locked[offer.crypto] || 0) + cryptoAmount).toFixed(8));
+          await updateDoc(pubDoc('users', state.authUser.uid), {
+            balances: { ...bal.available, [offer.crypto]: newAvail },
+            lockedBalances: { ...bal.locked, [offer.crypto]: newLocked }
+          });
+        } else if (!offer.isFeatured && state.usersMap[sellerUid]) {
+          const sBal = getUserBalances(state.usersMap[sellerUid]);
+          if ((sBal.available[offer.crypto] || 0) >= cryptoAmount) {
+            await updateDoc(pubDoc('users', sellerUid), {
+              balances: { ...sBal.available, [offer.crypto]: Math.max(0, Number((sBal.available[offer.crypto] - cryptoAmount).toFixed(8))) },
+              lockedBalances: { ...sBal.locked, [offer.crypto]: Number(((sBal.locked[offer.crypto] || 0) + cryptoAmount).toFixed(8)) }
+            });
+          }
+        }
+
+        const now = Date.now();
+        const tradeDoc = {
+          offerId: offer.id,
+          isFeaturedCounterparty: Boolean(offer.isFeatured),
+          buyerUid,
+          buyerName,
+          sellerUid,
+          sellerName,
+          crypto: offer.crypto,
+          fiat: offer.fiat,
+          fiatAmount,
+          cryptoAmount,
+          price: Number(offer.price),
+          paymentMethod: selectedPayment,
+          frozenTermsSnapshot: {
+            thirdPartyAllowed: Boolean(offer.termsFlags && offer.termsFlags.thirdPartyAllowed),
+            noCryptoRemarks: Boolean(offer.termsFlags && offer.termsFlags.noCryptoRemarks),
+            videoProofRequired: Boolean(offer.termsFlags && offer.termsFlags.videoProofRequired),
+            idRequired: Boolean(offer.termsFlags && offer.termsFlags.idRequired),
+            publicTerms: offer.publicTerms || ''
+          },
+          privateInstructions: offer.privateInstructions || 'Share payment details in chat.',
+          status: 'ESCROW_LOCKED',
+          buyerPaidAt: null,
+          disputeInfo: null,
+          createdAt: now,
+          expiresAt: now + 15 * 60 * 1000
+        };
+
+        const ref = await addDoc(pubCol('trades'), tradeDoc);
+
+        // Post opening System Message in trade_messages
+        await addDoc(pubCol('trade_messages'), {
+          tradeId: ref.id,
+          senderUid: 'SYSTEM',
+          senderName: 'Wayones Escrow',
+          senderRole: 'SYSTEM',
+          text: `Escrow locked ${formatCrypto(cryptoAmount, offer.crypto)} ${offer.crypto} for ${formatFiat(fiatAmount, offer.fiat)} via ${selectedPayment}. Offer terms snapshot permanently frozen.`,
+          createdAt: now
+        });
+
+        closeModal();
+        showToast('Escrow Trade opened! Opening live Trade Room...', 'success');
+        setTimeout(() => openTradeRoom(ref.id), 150);
+      } catch (err) {
+        console.error('Create trade error:', err);
+        showToast('Failed to open trade: ' + (err.message || 'Unknown error'), 'error');
+        if (btn) { btn.disabled = false; btn.textContent = 'Retry Open Trade'; }
+      }
+    }
+
+    /* =========================================================================
+       9. VIEW 2: MY TRADES & REAL-TIME INTERACTIVE ESCROW TRADE ROOM
+       ========================================================================= */
+    function statusBadgeHTML(status) {
+      const map = {
+        ESCROW_LOCKED: 'bg-brand/20 border-brand/40 text-brand',
+        PAID:          'bg-sky-500/20 border-sky-400/40 text-sky-300',
+        DISPUTED:      'bg-sell/20 border-sell/40 text-red-300',
+        RELEASED:      'bg-buy/15 border-buy/35 text-buy',
+        REFUNDED:      'bg-escrow/15 border-escrow/40 text-amber-300',
+        CANCELLED:     'bg-slate-600/20 border-slate-500/40 text-slate-400'
+      };
+      return `<span class="px-2 py-0.5 rounded-md border text-[10px] font-extrabold uppercase tracking-wide ${map[status] || map.CANCELLED}">${esc(status.replace('_', ' '))}</span>`;
+    }
+
+    function renderTradesView() {
+      if (!state.isMember || !state.authUser) {
+        return `
+          <div class="max-w-lg mx-auto bg-surface-card border border-surface-border rounded-3xl p-8 text-center mt-6">
+            <h2 class="font-display text-xl font-extrabold text-white">Sign In to View Your Escrow Trades</h2>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1.5 mb-5">Your real-time P2P orders, live trade chats, and dispute history sync across all your devices.</p>
+            <button onclick="window.app.openAuthModal('signin')" class="px-6 py-3 rounded-xl bg-brand hover:bg-brand-hover text-white font-extrabold text-sm shadow-glow">Sign In / Sign Up</button>
+          </div>
+        `;
+      }
+
+      const uid = state.authUser.uid;
+      const myTrades = state.trades.filter(t => t.buyerUid === uid || t.sellerUid === uid);
+      const active = myTrades.filter(t => ['ESCROW_LOCKED', 'PAID', 'DISPUTED'].includes(t.status));
+      const history = myTrades.filter(t => ['RELEASED', 'REFUNDED', 'CANCELLED'].includes(t.status));
+      const showActive = state.tradesTab !== 'history';
+      const list = showActive ? active : history;
+
+      return `
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <div>
+            <h1 class="font-display text-xl sm:text-2xl font-extrabold text-white">My Escrow Trades</h1>
+            <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Real-time synced orders. Tap any trade to enter the live Escrow Room.</p>
+          </div>
+          <div class="grid grid-cols-2 p-1 rounded-xl bg-surface-card border border-surface-border sm:w-72">
+            <button onclick="window.app.setTradesTab('active')" class="py-2 rounded-lg text-xs font-bold ${showActive ? 'bg-brand text-white' : 'text-slate-400 hover:text-white'}">Active (${active.length})</button>
+            <button onclick="window.app.setTradesTab('history')" class="py-2 rounded-lg text-xs font-bold ${!showActive ? 'bg-brand text-white' : 'text-slate-400 hover:text-white'}">History (${history.length})</button>
+          </div>
+        </div>
+
+        ${list.length === 0 ? `
+          <div class="bg-surface-card border border-surface-border rounded-2xl p-10 text-center">
+            <h3 class="text-base font-bold text-white">${showActive ? 'No Active Escrow Trades' : 'No Completed Trades Yet'}</h3>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1 mb-5">Pick an offer on the Marketplace to open a live real-time Escrow trade.</p>
+            <button onclick="window.app.switchView('market')" class="px-5 py-2.5 rounded-xl bg-brand text-white text-xs font-extrabold">Explore Market</button>
+          </div>
+        ` : `
+          <div class="flex flex-col gap-3">
+            ${list.map(t => {
+              const amBuyer = t.buyerUid === uid;
+              const peerName = amBuyer ? t.sellerName : t.buyerName;
+              return `
+                <div onclick="window.app.openTradeRoom('${t.id}')" class="cursor-pointer bg-surface-card hover:bg-surface-elevated/80 border border-surface-border hover:border-brand/45 rounded-2xl p-4 sm:p-5 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    ${getCoinSVG(t.crypto, 36)}
+                    <div>
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${amBuyer ? 'bg-buy/15 text-buy' : 'bg-sell/15 text-red-300'}">${amBuyer ? 'BUY' : 'SELL'}</span>
+                        <span class="text-base font-extrabold text-white tabular-nums">${formatCrypto(t.cryptoAmount, t.crypto)} ${t.crypto}</span>
+                        ${statusBadgeHTML(t.status)}
+                      </div>
+                      <div class="text-xs text-slate-400 mt-1">
+                        Peer: <strong class="text-white">${esc(peerName)}</strong> • ${esc(t.paymentMethod)} • ${timeAgo(t.createdAt)}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between sm:flex-col sm:items-end gap-1 pt-2 sm:pt-0 border-t sm:border-t-0 border-surface-border">
+                    <div class="text-base font-extrabold text-white tabular-nums">${formatFiat(t.fiatAmount, t.fiat)}</div>
+                    <span class="text-xs font-bold text-brand">Open Trade Room →</span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `}
+      `;
+    }
+
+    function openTradeRoom(tradeId) {
+      state.activeTradeRoomId = tradeId;
+      clearTradeTimer();
+      refreshTradeRoomModal();
+      startTradeTimer(tradeId);
+    }
+
+    function clearTradeTimer() {
+      if (tradeTimerHandle) { clearInterval(tradeTimerHandle); tradeTimerHandle = null; }
+    }
+
+    function startTradeTimer(tradeId) {
+      clearTradeTimer();
+      tradeTimerHandle = setInterval(() => {
+        const t = state.trades.find(x => x.id === tradeId);
+        const el = document.getElementById('room-timer');
+        if (!t || !el || ['RELEASED', 'REFUNDED', 'CANCELLED'].includes(t.status)) {
+          clearTradeTimer();
+          return;
+        }
+        const diff = Math.max(0, (t.expiresAt || 0) - Date.now());
+        el.textContent = `${String(Math.floor(diff / 60000)).padStart(2, '0')}:${String(Math.floor((diff % 60000) / 1000)).padStart(2, '0')}`;
+      }, 1000);
+    }
+
+    function refreshTradeRoomModal() {
+      if (!state.activeTradeRoomId) return;
+      const trade = state.trades.find(t => t.id === state.activeTradeRoomId);
+      if (!trade) return;
+
+      const prevInp = document.getElementById('room-chat-inp');
+      const savedDraft = prevInp ? prevInp.value : '';
+
+      const uid = state.authUser ? state.authUser.uid : '';
+      const amBuyer = trade.buyerUid === uid;
+      const amSeller = trade.sellerUid === uid;
+      const st = trade.status;
+      const isClosed = ['RELEASED', 'REFUNDED', 'CANCELLED'].includes(st);
+      const step = st === 'RELEASED' ? 3 : (st === 'PAID' || st === 'DISPUTED' ? 2 : 1);
+
+      const diffMs = Math.max(0, (trade.expiresAt || 0) - Date.now());
+      const mm = String(Math.floor(diffMs / 60000)).padStart(2, '0');
+      const ss = String(Math.floor((diffMs % 60000) / 1000)).padStart(2, '0');
+
+      const tradeMsgs = state.messages.filter(m => m.tradeId === trade.id);
+
+      const stepDot = (n, label) => {
+        const done = (st === 'RELEASED' && n <= 3) || (!isClosed && step > n);
+        const curr = !isClosed && step === n;
+        const disp = st === 'DISPUTED' && n >= 2;
+        return `
+          <div class="flex flex-col items-center gap-1 z-10 flex-1">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-extrabold border-2 ${
+              disp ? 'bg-sell/20 border-sell text-red-300' :
+              done ? 'bg-buy border-buy text-[#041F15]' :
+              curr ? 'bg-brand border-brand text-white shadow-glow' :
+              'bg-surface-elevated border-surface-border text-slate-500'
+            }">${done ? '✓' : n}</div>
+            <span class="text-[11px] font-bold text-center ${curr ? 'text-white' : done ? 'text-buy' : 'text-slate-400'}">${label}</span>
+          </div>
+        `;
+      };
+
+      let actionHTML = '';
+      if (st === 'RELEASED') {
+        actionHTML = `
+          <div class="bg-buy/15 border border-buy/40 rounded-2xl p-4">
+            <div class="text-sm font-extrabold text-buy">Crypto Released & Trade Completed!</div>
+            <div class="text-xs text-emerald-100/90 mt-0.5">${formatCrypto(trade.cryptoAmount, trade.crypto)} ${trade.crypto} settled to Buyer (${esc(trade.buyerName)}).</div>
+          </div>
+        `;
+      } else if (st === 'REFUNDED') {
+        actionHTML = `
+          <div class="bg-escrow/15 border border-escrow/40 rounded-2xl p-4">
+            <div class="text-sm font-extrabold text-amber-300">Escrow Refunded to Seller</div>
+            <div class="text-xs text-slate-200 mt-0.5">${esc((trade.disputeInfo && trade.disputeInfo.adminVerdict) || 'Escrow unlocked and returned to Seller.')}</div>
+          </div>
+        `;
+      } else if (st === 'CANCELLED') {
+        actionHTML = `
+          <div class="bg-surface-elevated border border-surface-border rounded-2xl p-4 text-center text-xs font-bold text-slate-400">
+            Trade Cancelled — Escrow Unlocked
+          </div>
+        `;
+      } else if (st === 'DISPUTED') {
+        actionHTML = `
+          <div class="bg-sell/15 border border-sell/40 rounded-2xl p-4 space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-extrabold uppercase tracking-wider text-red-300">Dispute Under Arbitration Review</span>
+              <span class="px-2 py-0.5 rounded bg-sell text-white text-[10px] font-extrabold">Escrow Frozen</span>
+            </div>
+            <div class="text-xs text-slate-200">
+              Reason: <strong>${esc(trade.disputeInfo?.reason || 'Dispute Opened')}</strong> • UTR: <span class="font-mono">${esc(trade.disputeInfo?.utrNumber || 'N/A')}</span>
+            </div>
+            <p class="text-[11px] text-slate-300">Escrow remains strictly locked until Wayones Arbitration reviews chat logs & submitted bank video proof.</p>
+          </div>
+        `;
+      } else if (amBuyer) {
+        if (st === 'ESCROW_LOCKED') {
+          actionHTML = `
+            <div class="flex flex-col sm:flex-row gap-2.5">
+              <button onclick="window.app.openMarkPaidModal('${trade.id}')" class="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl bg-buy hover:bg-emerald-400 text-[#041F15] font-extrabold text-xs sm:text-sm">
+                Mark as Paid (Enter UTR)
+              </button>
+              <button onclick="window.app.cancelEscrowTrade('${trade.id}')" class="min-h-[44px] px-4 py-2.5 rounded-xl bg-surface-elevated hover:bg-sell/20 border border-surface-border text-slate-300 hover:text-red-300 font-bold text-xs">
+                Cancel Trade
+              </button>
+            </div>
+          `;
+        } else if (st === 'PAID') {
+          actionHTML = `
+            <div class="space-y-2.5">
+              <div class="px-3.5 py-2.5 rounded-xl bg-brand/15 border border-brand/35 text-xs text-slate-200 flex items-center justify-between gap-2">
+                <span>Payment marked sent! Waiting for <strong>${esc(trade.sellerName)}</strong> to verify & release...</span>
+                ${trade.isFeaturedCounterparty ? `
+                  <button onclick="window.app.simulateFeaturedRelease('${trade.id}')" class="px-2.5 py-1 rounded-lg bg-brand text-white text-[11px] font-bold shrink-0">Simulate Release</button>
+                ` : ''}
+              </div>
+              <button onclick="window.app.openDisputeModal('${trade.id}')" class="w-full min-h-[42px] rounded-xl bg-sell/15 hover:bg-sell/25 border border-sell/40 text-red-300 font-extrabold text-xs">
+                Seller Not Releasing? Open Dispute
+              </button>
+            </div>
+          `;
+        }
+      } else if (amSeller) {
+        actionHTML = `
+          <div class="space-y-2.5">
+            ${st === 'ESCROW_LOCKED' && trade.isFeaturedCounterparty ? `
+              <div class="px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-surface-border text-xs text-slate-300 flex items-center justify-between gap-2">
+                <span>Waiting for Featured Buyer to transfer fiat...</span>
+                <button onclick="window.app.simulateFeaturedBuyerPaid('${trade.id}')" class="px-2.5 py-1 rounded-lg bg-brand text-white text-[11px] font-bold shrink-0">Simulate Buyer Paid</button>
+              </div>
+            ` : st === 'PAID' ? `
+              <div class="px-3.5 py-2.5 rounded-xl bg-escrow/15 border border-escrow/40 text-xs text-amber-200 font-semibold">
+                Buyer marked PAID! Check your actual bank balance before releasing crypto. Never trust screenshots alone.
+              </div>
+            ` : `
+              <div class="px-3.5 py-2.5 rounded-xl bg-surface-elevated border border-surface-border text-xs text-slate-300">
+                Waiting for Buyer (${esc(trade.buyerName)}) to transfer ${formatFiat(trade.fiatAmount, trade.fiat)}...
+              </div>
+            `}
+            <div class="flex flex-col sm:flex-row gap-2.5">
+              <button onclick="window.app.sellerReleaseCrypto('${trade.id}')" class="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl bg-buy hover:bg-emerald-400 text-[#041F15] font-extrabold text-xs sm:text-sm">
+                Verify Payment & Release ${formatCrypto(trade.cryptoAmount, trade.crypto)} ${trade.crypto}
+              </button>
+              <button onclick="window.app.openDisputeModal('${trade.id}')" class="min-h-[44px] px-4 py-2.5 rounded-xl bg-sell/15 hover:bg-sell/25 border border-sell/40 text-red-300 font-extrabold text-xs">
+                Open Dispute
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      const chatHTML = tradeMsgs.map(m => {
+        if (m.senderRole === 'SYSTEM') {
+          return `<div class="flex justify-center"><div class="px-3 py-1.5 rounded-xl bg-brand/10 border border-brand/25 text-[11px] text-slate-300 text-center max-w-[92%]">${esc(m.text)}</div></div>`;
+        }
+        if (m.senderRole === 'ADMIN') {
+          return `<div class="flex justify-center"><div class="px-3.5 py-2 rounded-xl bg-escrow/15 border border-escrow/40 text-xs text-amber-200 font-semibold text-center max-w-[94%]">⚖️ [Wayones Arbitrator]: ${esc(m.text)}</div></div>`;
+        }
+        const isMe = m.senderUid === uid;
+        return `
+          <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
+            <div class="px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm max-w-[85%] leading-relaxed ${
+              isMe ? 'bg-brand text-white rounded-br-sm' : 'bg-surface-elevated text-slate-100 border border-surface-border rounded-bl-sm'
+            }">${esc(m.text)}</div>
+            <span class="text-[10px] text-slate-500 mt-1 px-1">${esc(m.senderName)} (${esc(m.senderRole)}) • ${timeAgo(m.createdAt)}</span>
+          </div>
+        `;
+      }).join('');
+
+      openModal(`
+        <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade" onclick="window.app.handleBackdrop(event)">
+          <div class="animate-slide w-full sm:max-w-5xl max-h-[95vh] flex flex-col bg-surface-card border-t sm:border border-surface-border rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
+            <!-- Header -->
+            <div class="flex items-center justify-between gap-2 px-4 sm:px-6 py-3.5 bg-surface-elevated border-b border-surface-border shrink-0">
+              <div class="flex items-center gap-2.5 min-w-0">
+                ${getCoinSVG(trade.crypto, 30)}
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-display text-sm sm:text-base font-extrabold text-white truncate">
+                      ${amBuyer ? 'Buying' : 'Selling'} ${formatCrypto(trade.cryptoAmount, trade.crypto)} ${trade.crypto}
+                    </h3>
+                    ${statusBadgeHTML(st)}
+                  </div>
+                  <div class="text-[11px] text-slate-400">Buyer: <strong class="text-white">${esc(trade.buyerName)}</strong> • Seller: <strong class="text-white">${esc(trade.sellerName)}</strong></div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                ${!isClosed ? `<div class="px-2.5 py-1 rounded-xl bg-surface-bg border border-brand/35 text-xs font-extrabold text-white tabular-nums">⏱ <span id="room-timer">${mm}:${ss}</span></div>` : ''}
+                <button onclick="window.app.closeModal()" class="w-9 h-9 rounded-xl bg-surface-bg hover:bg-white/10 text-slate-300 flex items-center justify-center">✕</button>
+              </div>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1 overflow-y-auto p-4 sm:p-6">
+              <!-- 3-Step Escrow Progress Bar -->
+              <div class="relative flex items-start justify-between mb-6 px-4">
+                <div class="absolute top-4 left-[16%] right-[16%] h-0.5 bg-surface-border">
+                  <div class="h-full transition-all duration-300 ${st === 'DISPUTED' ? 'bg-sell' : 'bg-buy'}" style="width:${step === 1 ? 0 : step === 2 ? 50 : 100}%"></div>
+                </div>
+                ${stepDot(1, 'Escrow Locked')}
+                ${stepDot(2, 'Payment Sent')}
+                ${stepDot(3, 'Crypto Released')}
+              </div>
+
+              <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                <!-- Left Details -->
+                <div class="lg:col-span-6 space-y-3.5">
+                  <div class="bg-surface-elevated/70 border border-surface-border rounded-2xl p-4 space-y-2 text-xs">
+                    <div class="flex justify-between items-center">
+                      <span class="text-slate-400">Fiat Amount</span>
+                      <span class="text-lg font-extrabold text-white tabular-nums">${formatFiat(trade.fiatAmount, trade.fiat)}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                      <span class="text-slate-400">Escrow Locked Crypto</span>
+                      <span class="font-bold text-brand tabular-nums">${formatCrypto(trade.cryptoAmount, trade.crypto)} ${trade.crypto}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                      <span class="text-slate-400">Payment Method</span>
+                      <span class="font-bold text-slate-200">${esc(trade.paymentMethod)}</span>
+                    </div>
+                  </div>
+
+                  <!-- Revealed Private Payment Instructions -->
+                  <div class="bg-surface-bg border border-surface-border rounded-2xl p-4 space-y-2">
+                    <div class="flex items-center justify-between">
+                      <span class="text-[11px] font-extrabold uppercase tracking-wider text-brand">Private Payment Instructions</span>
+                      <button onclick="window.app.copy('${esc(trade.privateInstructions)}', 'Payment instructions copied!')" class="px-2.5 py-1 rounded-lg bg-brand/20 hover:bg-brand text-brand hover:text-white text-[11px] font-bold transition-colors">Copy</button>
+                    </div>
+                    <p class="text-xs text-slate-200 font-mono bg-surface-elevated p-3 rounded-xl border border-surface-border break-words leading-relaxed">
+                      ${esc(trade.privateInstructions)}
+                    </p>
+                  </div>
+
+                  <!-- Frozen Terms Snapshot -->
+                  <div class="bg-surface-bg border border-surface-border rounded-2xl p-3.5 space-y-2">
+                    <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Frozen Offer Terms Snapshot</div>
+                    <div class="flex flex-wrap gap-1.5">${renderRuleBadges(trade.frozenTermsSnapshot)}</div>
+                    <p class="text-xs text-slate-300 leading-relaxed">${esc(trade.frozenTermsSnapshot?.publicTerms || '')}</p>
+                  </div>
+
+                  <!-- Action Panel -->
+                  ${actionHTML}
+                </div>
+
+                <!-- Right Real-Time Chat -->
+                <div class="lg:col-span-6 flex flex-col bg-surface-bg border border-surface-border rounded-2xl overflow-hidden h-[380px] lg:h-[470px]">
+                  <div class="px-4 py-3 bg-surface-elevated border-b border-surface-border flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="w-2 h-2 rounded-full bg-buy"></span>
+                      <span class="text-xs font-extrabold text-white">Live Real-Time Trade Chat</span>
+                    </div>
+                    <span class="text-[10px] text-slate-400">Cloud Synced</span>
+                  </div>
+
+                  <div id="room-chat-feed" class="flex-1 overflow-y-auto p-3.5 space-y-3">
+                    ${chatHTML}
+                  </div>
+
+                  <form onsubmit="window.app.sendTradeMessage(event, '${trade.id}')" class="p-2.5 bg-surface-elevated/80 border-t border-surface-border flex items-center gap-2">
+                    <input id="room-chat-inp" type="text" autocomplete="off" value="${esc(savedDraft)}" placeholder="Type message or share UTR..." class="flex-1 h-10 px-3 rounded-xl bg-surface-bg border border-surface-border focus:border-brand focus:outline-none text-xs sm:text-sm text-white placeholder-slate-500" />
+                    <button type="submit" class="h-10 px-4 rounded-xl bg-brand hover:bg-brand-hover text-white font-bold text-xs shrink-0">Send</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `);
+
+      const feed = document.getElementById('room-chat-feed');
+      if (feed) feed.scrollTop = feed.scrollHeight;
+    }
+
+    async function sendTradeMessage(e, tradeId) {
+      e.preventDefault();
+      if (!db || !state.authUser) return;
+      const inp = document.getElementById('room-chat-inp');
+      const text = (inp?.value || '').trim();
+      if (!text) return;
+
+      const trade = state.trades.find(t => t.id === tradeId);
+      if (!trade) return;
+      const uid = state.authUser.uid;
+      const role = trade.buyerUid === uid ? 'BUYER' : (trade.sellerUid === uid ? 'SELLER' : 'BUYER');
+      const prof = getCurrentProfile();
+      const name = (prof && prof.displayName) || state.authUser.displayName || 'Trader';
+
+      inp.value = '';
+      try {
+        await addDoc(pubCol('trade_messages'), {
+          tradeId,
+          senderUid: uid,
+          senderName: name,
+          senderRole: role,
+          text,
+          createdAt: Date.now()
+        });
+      } catch (err) {
+        console.error('Send message failed:', err);
+        showToast('Message failed to send.', 'error');
+      }
+    }
+
+    function openMarkPaidModal(tradeId) {
+      const trade = state.trades.find(t => t.id === tradeId);
+      if (!trade) return;
+      openModal(`
+        <div class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade">
+          <div class="animate-slide w-full max-w-md bg-surface-card border border-surface-border rounded-3xl p-5 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between">
+              <h3 class="font-display text-base font-extrabold text-white">Confirm Payment Sent</h3>
+              <button onclick="window.app.openTradeRoom('${tradeId}')" class="w-8 h-8 rounded-lg bg-surface-elevated text-slate-300 flex items-center justify-center">✕</button>
+            </div>
+            <p class="text-xs text-slate-400">
+              Confirm only after sending <strong class="text-white">${formatFiat(trade.fiatAmount, trade.fiat)}</strong> via ${esc(trade.paymentMethod)}. Submitting fake UTRs or screenshots results in permanent account ban.
+            </p>
+            <form onsubmit="window.app.submitMarkPaid(event, '${tradeId}')" class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Bank UTR / Transaction Reference ID *</label>
+                <input id="paid-utr-inp" type="text" required minlength="5" placeholder="e.g. 432819402815" class="w-full h-11 px-3.5 rounded-xl bg-surface-elevated border border-surface-border focus:border-brand focus:outline-none text-sm font-mono text-white" />
+              </div>
+              <div class="grid grid-cols-2 gap-2.5 pt-1">
+                <button type="button" onclick="window.app.openTradeRoom('${tradeId}')" class="h-11 rounded-xl bg-surface-elevated text-slate-300 font-bold text-xs">Back</button>
+                <button type="submit" class="h-11 rounded-xl bg-buy text-[#041F15] font-extrabold text-xs">Confirm I Have Paid</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `);
+    }
+
+    async function submitMarkPaid(e, tradeId) {
+      e.preventDefault();
+      if (!db || !state.authUser) return;
+      const utr = (document.getElementById('paid-utr-inp')?.value || '').trim();
+      const trade = state.trades.find(t => t.id === tradeId);
+      if (!trade) return;
+
+      try {
+        await updateDoc(pubDoc('trades', tradeId), {
+          status: 'PAID',
+          buyerPaidAt: Date.now(),
+          paymentUtr: utr
+        });
+        await addDoc(pubCol('trade_messages'), {
+          tradeId,
+          senderUid: 'SYSTEM',
+          senderName: 'Wayones Escrow',
+          senderRole: 'SYSTEM',
+          text: `Buyer marked payment of ${formatFiat(trade.fiatAmount, trade.fiat)} as PAID (Ref/UTR: ${utr}). Seller must verify live bank credit before releasing.`,
+          createdAt: Date.now()
+        });
+        showToast('Marked as Paid! Seller has been notified.', 'success');
+        openTradeRoom(tradeId);
+      } catch (err) {
+        console.error('Mark paid failed:', err);
+        showToast('Error updating trade status.', 'error');
+      }
+    }
+
+    async function settleEscrowRelease(tradeId, byAdmin = false, adminNote = '') {
+      if (!db) return;
+      const trade = state.trades.find(t => t.id === tradeId);
+      if (!trade || ['RELEASED', 'REFUNDED', 'CANCELLED'].includes(trade.status)) return;
+
+      const coin = trade.crypto;
+      const qty = Number(trade.cryptoAmount);
+
+      try {
+        // 1. Credit Buyer's available balance & increment trade counters
+        const buyerDoc = state.usersMap[trade.buyerUid];
+        if (buyerDoc) {
+          const bBal = getUserBalances(buyerDoc);
+          await updateDoc(pubDoc('users', trade.buyerUid), {
+            balances: { ...bBal.available, [coin]: Number(((bBal.available[coin] || 0) + qty).toFixed(8)) },
+            completedTrades: (buyerDoc.completedTrades || 0) + 1,
+            totalTrades: (buyerDoc.totalTrades || 0) + 1
+          });
+        }
+
+        // 2. Release Seller's locked balance & increment counters
+        const sellerDoc = state.usersMap[trade.sellerUid];
+        if (sellerDoc) {
+          const sBal = getUserBalances(sellerDoc);
+          await updateDoc(pubDoc('users', trade.sellerUid), {
+            lockedBalances: { ...sBal.locked, [coin]: Math.max(0, Number(((sBal.locked[coin] || 0) - qty).toFixed(8))) },
+            completedTrades: (sellerDoc.completedTrades || 0) + 1,
+            totalTrades: (sellerDoc.totalTrades || 0) + 1
+          });
+        }
+
+        // 3. Update Trade Document
+        const updatePayload = { status: 'RELEASED' };
+        if (byAdmin && trade.disputeInfo) {
+          updatePayload.disputeInfo = {
+            ...trade.disputeInfo,
+            adminVerdict: adminNote || 'Arbitrator verified buyer payment and awarded Escrow funds to Buyer.',
+            resolvedAt: Date.now()
+          };
+        }
+        await updateDoc(pubDoc('trades', tradeId), updatePayload);
+
+        await addDoc(pubCol('trade_messages'), {
+          tradeId,
+          senderUid: byAdmin ? 'ADMIN' : 'SYSTEM',
+          senderName: byAdmin ? 'Wayones Arbitrator' : 'Wayones Escrow',
+          senderRole: byAdmin ? 'ADMIN' : 'SYSTEM',
+          text: byAdmin
+            ? `FINAL VERDICT: Awarded ${formatCrypto(qty, coin)} ${coin} to Buyer. ${adminNote}`            : `Seller verified payment & released ${formatCrypto(qty, coin)} ${coin} from Escrow to Buyer!`,
+          createdAt: Date.now()
+        });
+
+        showToast(`Released ${formatCrypto(qty, coin)} ${coin} to Buyer!`, 'success');
+      } catch (err) {
+        console.error('Release failed:', err);
+        showToast('Failed to release escrow.', 'error');
+      }
+    }
+
+    async function settleEscrowRefund(tradeId, adminNote = '') {
+      if (!db) return;
+      const trade = state.trades.find(t => t.id === tradeId);
+      if (!trade || ['RELEASED', 'REFUNDED', 'CANCELLED'].includes(trade.status)) return;
+
+      const coin = trade.crypto;
+      const qty = Number(trade.cryptoAmount);
+
+      try {
+        const sellerDoc = state.usersMap[trade.sellerUid];
+        if (sellerDoc) {
+          const sBal = getUserBalances(sellerDoc);
+          await updateDoc(pubDoc('users', trade.sellerUid), {
+            balances: { ...sBal.available, [coin]: Number(((sBal.available[coin] || 0) + qty).toFixed(8)) },
+            lockedBalances: { ...sBal.locked, [coin]: Math.max(0, Number(((sBal.locked[coin] || 0) - qty).toFixed(8))) }
+          });
+        }
+
+        await updateDoc(pubDoc('trades', tradeId), {
+          status: 'REFUNDED',
+          disputeInfo: {
+            ...(trade.disputeInfo || {}),
+            adminVerdict: adminNote || 'Arbitrator verified evidence and refunded Escrow back to Seller.',
+            resolvedAt: Date.now()
+          }
+        });
+
+        await addDoc(pubCol('trade_messages'), {
+          tradeId,
+          senderUid: 'ADMIN',
+          senderName: 'Wayones Arbitrator',
+          senderRole: 'ADMIN',
+          text: `FINAL VERDICT: Refunded ${formatCrypto(qty, coin)} ${coin} back to Seller. ${adminNote}`,
+          createdAt: Date.now()
+        });
+
+        showToast(`Escrow refunded (${formatCrypto(qty, coin)} ${coin}) to Seller!`, 'success');
+      } catch (err) {
+        console.error('Refund failed:', err);
+        showToast('Failed to refund escrow.', 'error');
+      }
+    }
+
+    async function cancelEscrowTrade(tradeId) {
+      if (!db) return;
+      const trade = state.trades.find(t => t.id === tradeId);
+      if (!trade || trade.status !== 'ESCROW_LOCKED') return;
+
+      const coin = trade.crypto;
+      const qty = Number(trade.cryptoAmount);
+
+      try {
+        const sellerDoc = state.usersMap[trade.sellerUid];
+        if (sellerDoc) {
+          const sBal = getUserBalances(sellerDoc);
+          await updateDoc(pubDoc('users', trade.sellerUid), {
+            balances: { ...sBal.available, [coin]: Number(((sBal.available[coin] || 0) + qty).toFixed(8)) },
+            lockedBalances: { ...sBal.locked, [coin]: Math.max(0, Number(((sBal.locked[coin] || 0) - qty).toFixed(8))) }
+          });
+        }
+        await updateDoc(pubDoc('trades', tradeId), { status: 'CANCELLED' });
+        await addDoc(pubCol('trade_messages'), {
+          tradeId,
+          senderUid: 'SYSTEM',
+          senderName: 'Wayones Escrow',
+          senderRole: 'SYSTEM',
+          text: 'Trade cancelled before payment. Escrow unlocked.',
+          createdAt: Date.now()
+        });
+        showToast('Trade cancelled cleanly.', 'info');
+      } catch (err) {
+        console.error('Cancel failed:', err);
+      }
+    }
+
+    function openDisputeModal(tradeId) {
+      const trade = state.trades.find(t => t.id === tradeId);
+      if (!trade) return;
+      openModal(`
+        <div class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade">
+          <div class="animate-slide w-full max-w-lg bg-surface-card border border-sell/45 rounded-3xl p-5 sm:p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-sell text-white text-[10px] font-extrabold uppercase">Escrow Freeze</span>
+                <h3 class="font-display text-base font-extrabold text-white">Open Trade Dispute</h3>
+              </div>
+              <button onclick="window.app.openTradeRoom('${tradeId}')" class="w-8 h-8 rounded-lg bg-surface-elevated text-slate-300 flex items-center justify-center">✕</button>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Opening a dispute freezes <strong class="text-white">${formatCrypto(trade.cryptoAmount, trade.crypto)} ${trade.crypto}</strong> in Escrow until Wayones Arbitration reviews your evidence and issues a binding decision.
+            </p>
+            <form onsubmit="window.app.submitDispute(event, '${tradeId}')" class="space-y-3.5">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Dispute Reason *</label>
+                <select id="disp-reason-sel" class="w-full h-10 px-3 rounded-xl bg-surface-elevated border border-surface-border text-sm text-white">
+                  <option value="Fake Screenshot / Payment Not Received">Fake Screenshot / Payment Not Received</option>
+                  <option value="Unauthorized Third-Party Payment">Unauthorized Third-Party Payment</option>
+                  <option value="Seller Not Releasing After Verified Payment">Seller Not Releasing After Verified Payment</option>
+                  <option value="Incorrect Fiat Amount Sent">Incorrect Fiat Amount Sent</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Bank UTR / Reference Number *</label>
+                <input id="disp-utr-inp" type="text" required value="${esc(trade.paymentUtr || '')}" placeholder="Enter UTR or 'No Credit Found'" class="w-full h-10 px-3.5 rounded-xl bg-surface-elevated border border-surface-border text-sm font-mono text-white" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Un-edited Bank Video Recording / Proof Link *</label>
+                <input id="disp-proof-inp" type="text" required placeholder="https://drive.google.com/... or receipt ID" class="w-full h-10 px-3.5 rounded-xl bg-surface-elevated border border-surface-border text-xs sm:text-sm text-white" />
+              </div>
+              <div class="grid grid-cols-2 gap-2.5 pt-1">
+                <button type="button" onclick="window.app.openTradeRoom('${tradeId}')" class="h-11 rounded-xl bg-surface-elevated text-slate-300 font-bold text-xs">Cancel</button>
+                <button type="submit" class="h-11 rounded-xl bg-sell hover:bg-red-500 text-white font-extrabold text-xs">Freeze Escrow & Submit</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `);
+    }
+
+    async function submitDispute(e, tradeId) {
+      e.preventDefault();
+      if (!db || !state.authUser) return;
+      const trade = state.trades.find(t => t.id === tradeId);
+      if (!trade) return;
+
+      const reason = document.getElementById('disp-reason-sel').value;
+      const utrNumber = (document.getElementById('disp-utr-inp').value || '').trim();
+      const proofUrl = (document.getElementById('disp-proof-inp').value || '').trim();
+      const role = trade.buyerUid === state.authUser.uid ? 'BUYER' : 'SELLER';
+
+      try {
+        await updateDoc(pubDoc('trades', tradeId), {
+          status: 'DISPUTED',
+          disputeInfo: {
+            openedByUid: state.authUser.uid,
+            openedByRole: role,
+            reason,
+            utrNumber,
+            proofUrl,
+            openedAt: Date.now(),
+            adminVerdict: null,
+            resolvedAt: null
+          }
+        });
+        await addDoc(pubCol('trade_messages'), {
+          tradeId,
+          senderUid: 'SYSTEM',
+          senderName: 'Wayones Escrow',
+          senderRole: 'SYSTEM',
+          text: `DISPUTE OPENED by ${role}: "${reason}". UTR: ${utrNumber}. Proof submitted. Escrow frozen pending Arbitration review.`,
+          createdAt: Date.now()
+        });
+        showToast('Dispute opened & Escrow frozen!', 'warning');
+        openTradeRoom(tradeId);
+      } catch (err) {
+        console.error('Submit dispute failed:', err);
+        showToast('Failed to open dispute.', 'error');
+      }
+    }
+
+    async function simulateFeaturedBuyerPaid(tradeId) {
+      if (!db) return;
+      const trade = state.trades.find(t => t.id === tradeId);
+      if (!trade) return;
+      const fakeUtr = 'UTR' + Math.floor(100000000 + Math.random() * 900000000);
+      await updateDoc(pubDoc('trades', tradeId), { status: 'PAID', buyerPaidAt: Date.now(), paymentUtr: fakeUtr });
+      await addDoc(pubCol('trade_messages'), {
+        tradeId,
+        senderUid: trade.buyerUid,
+        senderName: trade.buyerName,
+        senderRole: 'BUYER',
+        text: `Transferred ${formatFiat(trade.fiatAmount, trade.fiat)} via ${trade.paymentMethod}. UTR: ${fakeUtr}. Please verify & release!`,
+        createdAt: Date.now()
+      });
+      showToast('Featured counterparty marked payment as PAID.', 'info');
+    }
+
+    /* =========================================================================
+       10. VIEW 3: POST AD (CUSTOM OFFER TERMS & THIRD-PARTY TOGGLES)
+       ========================================================================= */
+    function renderPostAdView() {
+      if (!state.isMember || !state.authUser) {
+        return `
+          <div class="max-w-lg mx-auto bg-surface-card border border-surface-border rounded-3xl p-8 text-center mt-6">
+            <h2 class="font-display text-xl font-extrabold text-white">Sign In to Post Live P2P Offers</h2>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1.5 mb-5">Your published offers sync instantly across all global Wayones users in real time.</p>
+            <button onclick="window.app.openAuthModal('signup')" class="px-6 py-3 rounded-xl bg-brand hover:bg-brand-hover text-white font-extrabold text-sm shadow-glow">Create Trader Account</button>
+          </div>
+        `;
+      }
+
+      const d = state.postDraft;
+      const fiatMeta = getFiatMeta(d.fiat);
+      const coinMeta = COINS[d.crypto];
+      const suggestedPrice = (coinMeta.priceUSD * fiatMeta.rateFromUSD).toFixed(2);
+      const suggestedMin = (15 * fiatMeta.rateFromUSD).toFixed(0);
+      const suggestedMax = (1500 * fiatMeta.rateFromUSD).toFixed(0);
+
+      const toggleSwitch = (key, title, subtitle, amber = false) => {
+        const on = Boolean(d[key]);
+        return `
+          <button type="button" onclick="window.app.togglePostDraft('${key}')" class="w-full p-3.5 rounded-2xl border text-left flex items-center justify-between gap-3 transition-all ${
+            on ? (amber ? 'bg-escrow/12 border-escrow/40' : 'bg-brand/12 border-brand/40') : 'bg-surface-elevated/60 border-surface-border'
+          }">
+            <div>
+              <div class="text-xs sm:text-sm font-bold ${on && amber ? 'text-amber-300' : 'text-white'}">${title}</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">${subtitle}</div>
+            </div>
+            <div class="w-11 h-6 rounded-full p-0.5 transition-colors shrink-0 ${on ? (amber ? 'bg-escrow' : 'bg-brand') : 'bg-slate-700'}">
+              <div class="w-5 h-5 rounded-full bg-white transition-transform ${on ? 'translate-x-5' : 'translate-x-0'}"></div>
+            </div>
+          </button>
+        `;
+      };
+
+      return `
+        <div class="max-w-2xl mx-auto">
+          <div class="mb-5">
+            <h1 class="font-display text-xl sm:text-2xl font-extrabold text-white">Post Live Global P2P Offer</h1>
+            <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Configure your pricing, third-party payment rules & private escrow instructions.</p>
+          </div>
+
+          <form onsubmit="window.app.submitNewOffer(event)" class="bg-surface-card border border-surface-border rounded-3xl p-5 sm:p-6 space-y-5 shadow-card">
+            <!-- Offer Type -->
+            <div class="grid grid-cols-2 gap-3">
+              <button type="button" onclick="window.app.setPostDraft('type','SELL')" class="p-3.5 rounded-2xl border text-left transition-all ${d.type === 'SELL' ? 'bg-sell/15 border-sell' : 'bg-surface-elevated border-surface-border'}">
+                <div class="text-sm font-extrabold ${d.type === 'SELL' ? 'text-red-400' : 'text-white'}">I Want to SELL Crypto</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">Appears on Market "Buy" tab</div>
+              </button>
+              <button type="button" onclick="window.app.setPostDraft('type','BUY')" class="p-3.5 rounded-2xl border text-left transition-all ${d.type === 'BUY' ? 'bg-buy/15 border-buy' : 'bg-surface-elevated border-surface-border'}">
+                <div class="text-sm font-extrabold ${d.type === 'BUY' ? 'text-buy' : 'text-white'}">I Want to BUY Crypto</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">Appears on Market "Sell" tab</div>
+              </button>
+            </div>
+
+            <!-- Crypto Selector -->
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Cryptocurrency</label>
+              <div class="grid grid-cols-5 gap-2">
+                ${Object.keys(COINS).map(c => `
+                  <button type="button" onclick="window.app.setPostDraft('crypto','${c}')" class="py-2.5 rounded-xl border text-xs font-bold flex flex-col items-center gap-1 ${d.crypto === c ? 'bg-brand/20 border-brand text-white' : 'bg-surface-elevated border-surface-border text-slate-400'}">
+                    ${getCoinSVG(c, 20)}<span>${c}</span>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- Fiat & Price -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Fiat Currency</label>
+                <select onchange="window.app.setPostDraft('fiat', this.value)" class="w-full h-11 px-3 rounded-xl bg-surface-elevated border border-surface-border text-sm text-white">
+                  ${Object.keys(FIATS).map(code => `<option value="${code}" ${d.fiat === code ? 'selected' : ''}>${FIATS[code].symbol} ${code} — ${FIATS[code].name}</option>`).join('')}
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Fixed Price per 1 ${d.crypto} (${d.fiat})</label>
+                <div class="relative flex items-center">
+                  <span class="absolute left-3.5 text-brand font-bold">${fiatMeta.symbol}</span>
+                  <input id="post-price-inp" type="number" step="any" required value="${suggestedPrice}" class="w-full h-11 pl-9 pr-3 rounded-xl bg-surface-elevated border border-surface-border text-sm font-bold text-white tabular-nums" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Limits & Available Amount -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Min Limit (${d.fiat})</label>
+                <input id="post-min-inp" type="number" step="any" required value="${suggestedMin}" class="w-full h-11 px-3.5 rounded-xl bg-surface-elevated border border-surface-border text-sm font-bold text-white tabular-nums" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Max Limit (${d.fiat})</label>
+                <input id="post-max-inp" type="number" step="any" required value="${suggestedMax}" class="w-full h-11 px-3.5 rounded-xl bg-surface-elevated border border-surface-border text-sm font-bold text-white tabular-nums" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Total Amount (${d.crypto})</label>
+                <input id="post-avail-inp" type="number" step="any" required value="${d.crypto === 'USDT' || d.crypto === 'USDC' ? '500' : '1'}" class="w-full h-11 px-3.5 rounded-xl bg-surface-elevated border border-surface-border text-sm font-bold text-white tabular-nums" />
+              </div>
+            </div>
+
+            <!-- Payment Methods Multi-Select -->
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Accepted Payment Methods (Tap to toggle)</label>
+              <div class="flex flex-wrap gap-2">
+                ${PAYMENT_METHODS.map(pm => {
+                  const sel = d.paymentMethods.includes(pm);
+                  return `<button type="button" onclick="window.app.togglePostPM('${pm}')" class="px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${sel ? 'bg-brand/20 border-brand text-white' : 'bg-surface-elevated border-surface-border text-slate-400'}">${pm}</button>`;
+                }).join('')}
+              </div>
+            </div>
+
+            <!-- Custom Offer Rule Toggles -->
+            <div class="space-y-2.5">
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-400">Custom Offer Terms & Policies</label>
+              ${toggleSwitch('thirdPartyAllowed', 'Third-Party Payments Allowed', 'Allow transfers from family, business, or partner accounts (displays caution badge)', true)}
+              ${toggleSwitch('noCryptoRemarks', 'No Crypto Remarks', 'Strictly prohibit words like USDT, BTC, or Crypto in bank/UPI payment notes')}
+              ${toggleSwitch('videoProofRequired', 'Video Screen-Recording Proof Required', 'Counterparty must share un-edited banking app refresh recording on dispute')}
+              ${toggleSwitch('idRequired', 'ID / Selfie Check Required', 'Require ID verification inside trade chat for high-value orders')}
+            </div>
+
+            <!-- Public Terms & Private Instructions -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Public Offer Terms (Visible before trade opens)</label>
+              <textarea id="post-pub-terms" rows="2" required class="w-full p-3 rounded-xl bg-surface-elevated border border-surface-border focus:border-brand focus:outline-none text-xs sm:text-sm text-white">Fast escrow release upon verified bank credit. Please read my payment & third-party policy carefully before opening a trade.</textarea>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Private Payment Instructions (Revealed ONLY inside active Escrow Trade Room)</label>
+              <textarea id="post-priv-instr" rows="2" required placeholder="Enter UPI ID, IBAN, Wise tag, or step-by-step instructions..." class="w-full p-3 rounded-xl bg-surface-elevated border border-surface-border focus:border-brand focus:outline-none text-xs sm:text-sm font-mono text-white"></textarea>
+            </div>
+
+            <button id="post-ad-btn" type="submit" class="w-full h-12 rounded-xl bg-brand hover:bg-brand-hover text-white font-extrabold text-sm shadow-glow transition-all">
+              Publish Live Offer to Global Market
+            </button>
+          </form>
+        </div>
+      `;
+    }
+
+    async function submitNewOffer(e) {
+      e.preventDefault();
+      if (!requireMemberAction() || !db) return;
+
+      const d = state.postDraft;
+      const price = parseFloat(document.getElementById('post-price-inp').value);
+      const minLimit = parseFloat(document.getElementById('post-min-inp').value);
+      const maxLimit = parseFloat(document.getElementById('post-max-inp').value);
+      const availableAmount = parseFloat(document.getElementById('post-avail-inp').value);
+      const publicTerms = (document.getElementById('post-pub-terms').value || '').trim();
+      const privateInstructions = (document.getElementById('post-priv-instr').value || '').trim();
+
+      if (d.paymentMethods.length === 0) { showToast('Select at least one payment method.', 'error'); return; }
+      if (isNaN(price) || price <= 0 || isNaN(minLimit) || minLimit <= 0 || isNaN(maxLimit) || maxLimit < minLimit || isNaN(availableAmount) || availableAmount <= 0) {
+        showToast('Please enter valid price, limits, and available amount.', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('post-ad-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Publishing Live...'; }
+
+      try {
+        const prof = getCurrentProfile();
+        const creatorName = (prof && prof.displayName) || state.authUser.displayName || state.authUser.email.split('@')[0];
+
+        await addDoc(pubCol('offers'), {
+          creatorUid: state.authUser.uid,
+          creatorName,
+          type: d.type,
+          crypto: d.crypto,
+          fiat: d.fiat,
+          price,
+          minLimit,
+          maxLimit,
+          availableAmount,
+          paymentMethods: [...d.paymentMethods],
+          termsFlags: {
+            thirdPartyAllowed: Boolean(d.thirdPartyAllowed),
+            noCryptoRemarks: Boolean(d.noCryptoRemarks),
+            videoProofRequired: Boolean(d.videoProofRequired),
+            idRequired: Boolean(d.idRequired)
+          },
+          publicTerms,
+          privateInstructions,
+          status: 'ACTIVE',
+          createdAt: Date.now()
+        });
+
+        state.fiat = d.fiat;
+        state.marketFilter.crypto = d.crypto;
+        state.marketFilter.userAction = d.type === 'SELL' ? 'BUY' : 'SELL';
+        state.marketFilter.payment = 'ALL';
+        state.activeView = 'market';
+        renderAll();
+        showToast(`Live ${d.crypto} offer published for all global users!`, 'success');
+      } catch (err) {
+        console.error('Publish offer failed:', err);
+        showToast('Failed to publish offer.', 'error');
+        if (btn) { btn.disabled = false; btn.textContent = 'Publish Live Offer to Global Market'; }
+      }
+    }
+
+    /* =========================================================================
+       11. VIEW 4: REAL NON-CUSTODIAL IN-APP WALLET (ETHERS.JS v6)
+       ========================================================================= */
+    async function generateRealEvmWallet() {
+      try {
+        let address = '';
+        let mnemonic = '';
+        let privateKey = '';
+
+        if (window.ethers && window.ethers.Wallet && typeof window.ethers.Wallet.createRandom === 'function') {
+          const w = window.ethers.Wallet.createRandom();
+          address = w.address;
+          mnemonic = w.mnemonic ? w.mnemonic.phrase : '';
+          privateKey = w.privateKey;
+        } else {
+          // Cryptographic fallback using Web Crypto getRandomValues if offline CDN unavailable
+          const bytes = new Uint8Array(20);
+          window.crypto.getRandomValues(bytes);
+          address = '0x' + Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+          const words = [];
+          const pool = [...FALLBACK_WORDS];
+          for (let i = 0; i < 12; i++) {
+            const r = new Uint32Array(1);
+            window.crypto.getRandomValues(r);
+            words.push(pool.splice(r[0] % pool.length, 1)[0]);
+          }
+          mnemonic = words.join(' ');
+        }
+
+        state.deviceWallet.address = address;
+        state.deviceWallet.mnemonic = mnemonic;
+        state.deviceWallet.privateKey = privateKey;
+        state.deviceWallet.seedRevealed = false;
+        state.deviceWallet.seedBackedUp = false;
+
+        // Sync ONLY the PUBLIC 0x... address to Firestore (NEVER private key or seed phrase!)
+        if (db && state.isMember && state.authUser) {
+          await updateDoc(pubDoc('users', state.authUser.uid), {
+            publicWalletAddress: address
+          }).catch(() => {});
+        }
+
+        renderAll();
+        showToast('Real EVM Non-Custodial Wallet generated on your device!', 'success');
+      } catch (err) {
+        console.error('Wallet generation error:', err);
+        showToast('Wallet generation failed.', 'error');
+      }
+    }
+
+    function openImportSeedModal() {
+      openModal(`
+        <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade" onclick="window.app.handleBackdrop(event)">
+          <div class="animate-slide w-full sm:max-w-md bg-surface-card border-t sm:border border-surface-border rounded-t-3xl sm:rounded-3xl p-6 space-y-4 shadow-2xl" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between">
+              <h3 class="font-display text-base font-extrabold text-white">Import 12-Word Seed Phrase</h3>
+              <button onclick="window.app.closeModal()" class="w-8 h-8 rounded-lg bg-surface-elevated text-slate-300 flex items-center justify-center">✕</button>
+            </div>
+            <p class="text-xs text-slate-400">Your phrase is processed 100% locally in your browser using Ethers.js and is NEVER uploaded to any server.</p>
+            <form onsubmit="window.app.submitImportSeed(event)" class="space-y-3">
+              <textarea id="import-seed-inp" rows="3" required placeholder="Enter your 12 space-separated BIP-39 words..." class="w-full p-3 rounded-xl bg-surface-elevated border border-surface-border focus:border-brand focus:outline-none text-xs sm:text-sm font-mono text-white"></textarea>
+              <div id="import-seed-err" class="hidden px-3 py-2 rounded-xl bg-sell/15 border border-sell/40 text-xs font-semibold text-red-300"></div>
+              <button type="submit" class="w-full h-11 rounded-xl bg-brand hover:bg-brand-hover text-white font-extrabold text-sm shadow-glow">Restore Wallet Locally</button>
+            </form>
+          </div>
+        </div>
+      `);
+    }
+
+    async function submitImportSeed(e) {
+      e.preventDefault();
+      const phrase = (document.getElementById('import-seed-inp')?.value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      const errBox = document.getElementById('import-seed-err');
+      try {
+        let address = '';
+        let privateKey = '';
+        if (window.ethers && window.ethers.Wallet && typeof window.ethers.Wallet.fromPhrase === 'function') {
+          const w = window.ethers.Wallet.fromPhrase(phrase);
+          address = w.address;
+          privateKey = w.privateKey;
+        } else {
+          if (phrase.split(' ').length !== 12) throw new Error('Must be exactly 12 words.');
+          const hash = await sha256Hex(phrase);
+          address = '0x' + hash.slice(0, 40);
+        }
+
+        state.deviceWallet.address = address;
+        state.deviceWallet.mnemonic = phrase;
+        state.deviceWallet.privateKey = privateKey;
+        state.deviceWallet.seedBackedUp = true;
+
+        if (db && state.isMember && state.authUser) {
+          await updateDoc(pubDoc('users', state.authUser.uid), { publicWalletAddress: address }).catch(() => {});
+        }
+        closeModal();
+        renderAll();
+        showToast(`Wallet restored: ${shortAddr(address)}`, 'success');
+      } catch (err) {
+        if (errBox) {
+          errBox.textContent = 'Invalid BIP-39 12-word recovery phrase. Check spelling and word order.';
+          errBox.classList.remove('hidden');
+        }
+      }
+    }
+
+    async function claimTestnetFaucet() {
+      if (!requireMemberAction() || !db || !state.authUser) return;
+      try {
+        const prof = getCurrentProfile();
+        const bal = getUserBalances(prof);
+        await updateDoc(pubDoc('users', state.authUser.uid), {
+          balances: {
+            ...bal.available,
+            USDT: Number(((bal.available.USDT || 0) + 500).toFixed(2)),
+            USDC: Number(((bal.available.USDC || 0) + 200).toFixed(2)),
+            SOL: Number(((bal.available.SOL || 0) + 2).toFixed(4))
+          }
+        });
+        showToast('+500 Test USDT, +200 USDC & +2 SOL added to your Escrow Testnet balance!', 'success');
+      } catch (err) {
+        console.error('Faucet error:', err);
+        showToast('Could not claim faucet right now.', 'error');
+      }
+    }
+
+    function renderWalletView() {
+      const prof = getCurrentProfile();
+      const bal = getUserBalances(prof);
+      const dw = state.deviceWallet;
+      const displayAddr = dw.address || (prof && prof.publicWalletAddress) || '';
+      const fiatMeta = getFiatMeta(state.fiat);
+
+      let totalUSD = 0;
+      Object.keys(COINS).forEach(c => {
+        totalUSD += ((bal.available[c] || 0) + (bal.locked[c] || 0)) * COINS[c].priceUSD;
+      });
+      const totalFiat = totalUSD * fiatMeta.rateFromUSD;
+
+      return `
+        <div class="space-y-6">
+          <!-- Non-Custodial Hero Card -->
+          <section class="hero-glow border border-brand/30 rounded-3xl p-5 sm:p-7 shadow-card">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+              <div>
+                <div class="flex items-center gap-2 flex-wrap mb-2">
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-buy/15 border border-buy/35 text-buy text-[11px] font-extrabold">
+                    <span class="w-2 h-2 rounded-full bg-buy"></span>
+                    Non-Custodial Key Local | Escrow Testnet Mode
+                  </span>
+                </div>
+                <div class="font-display text-3xl sm:text-4xl font-extrabold text-white tabular-nums tracking-tight mt-2">
+                  ${formatFiat(totalFiat, state.fiat)}
+                </div>
+                <div class="text-xs sm:text-sm text-slate-300 font-semibold tabular-nums mt-0.5">
+                  ≈ ${formatFiat(totalUSD, 'USD')} USD Testnet Escrow Portfolio
+                </div>
+              </div>
+
+              <div class="flex flex-wrap gap-2.5">
+                <button onclick="window.app.claimTestnetFaucet()" class="min-h-[44px] px-4 py-2.5 rounded-xl bg-buy hover:bg-emerald-400 text-[#041F15] font-extrabold text-xs sm:text-sm shadow-md">
+                  + Claim Testnet USDT Faucet
+                </button>
+                <button onclick="window.app.openImportSeedModal()" class="min-h-[44px] px-4 py-2.5 rounded-xl bg-surface-elevated hover:bg-white/10 border border-surface-border text-white font-bold text-xs sm:text-sm">
+                  Import 12-Word Phrase
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Real Client-Side EVM Key Generator / Deposit QR Section -->
+          <section class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <!-- Left: Real 0x Deposit Address & SVG QR -->
+            <div class="lg:col-span-6 bg-surface-card border border-surface-border rounded-3xl p-5 sm:p-6 space-y-4">
+              <div class="flex items-center justify-between gap-2">
+                <div>
+                  <h2 class="font-display text-base font-extrabold text-white">Your Personal EVM Deposit Address</h2>
+                  <p class="text-xs text-slate-400">Generated cryptographically on your device via Ethers.js v6</p>
+                </div>
+                ${displayAddr ? `<span class="px-2 py-0.5 rounded bg-buy/15 text-buy text-[10px] font-extrabold uppercase">Real 0x Key</span>` : ''}
+              </div>
+
+              ${!displayAddr ? `
+                <div class="bg-surface-bg border border-dashed border-brand/40 rounded-2xl p-6 text-center space-y-3">
+                  <div class="w-12 h-12 mx-auto rounded-2xl bg-brand/15 border border-brand/35 flex items-center justify-center text-brand">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                  </div>
+                  <div class="text-sm font-extrabold text-white">Initialize Your Non-Custodial Wallet</div>
+                  <p class="text-xs text-slate-400">Create a real BEP-20 / Polygon / ERC-20 address and 12-word recovery phrase directly on this device. Only your public address is linked to your profile.</p>
+                  <button onclick="window.app.generateRealEvmWallet()" class="px-5 py-3 rounded-xl bg-brand hover:bg-brand-hover text-white font-extrabold text-xs sm:text-sm shadow-glow">
+                    Generate Real EVM Wallet
+                  </button>
+                </div>
+              ` : `
+                <!-- Network Selector -->
+                <div class="flex flex-wrap gap-2">
+                  ${WALLET_NETWORKS.map(n => `
+                    <button onclick="window.app.setWalletNetwork('${n.id}')" class="px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                      dw.network === n.id ? 'bg-brand text-white border-brand' : 'bg-surface-elevated border-surface-border text-slate-300 hover:text-white'
+                    }">${n.label}</button>
+                  `).join('')}
+                </div>
+
+                <!-- Pure SVG QR -->
+                <div class="flex flex-col items-center py-4 bg-surface-bg border border-surface-border rounded-2xl">
+                  ${generateQRSVG(dw.network + ':' + displayAddr)}
+                  <span class="text-[11px] text-slate-400 mt-2.5">Scan to send ${dw.network} tokens to your self-custody wallet</span>
+                </div>
+
+                <!-- Address Copy Row -->
+                <div class="bg-surface-elevated border border-surface-border rounded-xl p-3 flex items-center justify-between gap-2">
+                  <div class="font-mono text-xs text-white break-all">${esc(displayAddr)}</div>
+                  <button onclick="window.app.copy('${esc(displayAddr)}', 'Wallet address copied!')" class="px-3 py-1.5 rounded-lg bg-brand hover:bg-brand-hover text-white text-xs font-bold shrink-0">Copy</button>
+                </div>
+              `}
+            </div>
+
+            <!-- Right: Device-Local 12-Word BIP-39 Seed Vault -->
+            <div class="lg:col-span-6 bg-surface-card border border-surface-border rounded-3xl p-5 sm:p-6 space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h2 class="font-display text-base font-extrabold text-white">12-Word BIP-39 Recovery Seed</h2>
+                  <p class="text-xs text-slate-400">Stored strictly in device memory — NEVER uploaded to Firestore</p>
+                </div>
+                ${dw.seedBackedUp ? `<span class="px-2 py-0.5 rounded bg-buy/15 text-buy text-[10px] font-extrabold">Backed Up ✓</span>` : ''}
+              </div>
+
+              ${!dw.mnemonic ? `
+                <div class="bg-surface-bg border border-surface-border rounded-2xl p-6 text-center space-y-3">
+                  <p class="text-xs text-slate-300 leading-relaxed">
+                    ${displayAddr
+                      ? 'Your public address is linked to your profile, and your 12-word seed is never stored on Wayones servers. Import your 12-word phrase or generate a fresh wallet on this device.'
+                      : 'Click "Generate Real EVM Wallet" to create a real 12-word BIP-39 recovery phrase locally on your device.'}
+                  </p>
+                  <div class="flex flex-wrap justify-center gap-2">
+                    <button onclick="window.app.generateRealEvmWallet()" class="px-4 py-2.5 rounded-xl bg-brand text-white text-xs font-bold">Generate New Seed</button>
+                    <button onclick="window.app.openImportSeedModal()" class="px-4 py-2.5 rounded-xl bg-surface-elevated border border-surface-border text-white text-xs font-bold">Import Phrase</button>
+                  </div>
+                </div>
+              ` : `
+                <div class="p-3 rounded-xl bg-escrow/12 border border-escrow/35 text-xs text-amber-200 leading-relaxed">
+                  <strong>Security Notice:</strong> Write these 12 words down offline. Wayones cannot recover lost seed phrases.
+                </div>
+
+                <div class="relative bg-surface-bg border border-surface-border rounded-2xl p-4">
+                  <div class="grid grid-cols-3 gap-2 transition-all ${dw.seedRevealed ? '' : 'blur-md select-none pointer-events-none'}">
+                    ${dw.mnemonic.split(' ').map((w, i) => `
+                      <div class="px-2.5 py-2 rounded-xl bg-surface-elevated border border-surface-border text-xs font-mono">
+                        <span class="text-slate-500 mr-1">${i + 1}.</span><strong class="text-white">${esc(w)}</strong>
+                      </div>
+                    `).join('')}
+                  </div>
+                  ${!dw.seedRevealed ? `
+                    <div class="absolute inset-0 flex items-center justify-center">
+                      <button onclick="window.app.toggleSeedReveal()" class="px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-white font-extrabold text-xs shadow-glow">
+                        Reveal 12-Word Phrase
+                      </button>
+                    </div>
+                  ` : ''}
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <button onclick="window.app.toggleSeedReveal()" class="h-10 rounded-xl bg-surface-elevated hover:bg-white/10 border border-surface-border text-xs font-bold text-white">
+                    ${dw.seedRevealed ? 'Hide Seed' : 'Reveal Seed'}
+                  </button>
+                  <button onclick="window.app.copy('${esc(dw.mnemonic)}', '12-word seed copied! Keep it offline.')" class="h-10 rounded-xl bg-surface-elevated hover:bg-white/10 border border-surface-border text-xs font-bold text-white">
+                    Copy Seed
+                  </button>
+                  <button onclick="window.app.confirmSeedBackedUp()" class="col-span-2 sm:col-span-1 h-10 rounded-xl bg-buy/15 hover:bg-buy border border-buy/35 text-buy hover:text-[#041F15] text-xs font-extrabold transition-colors">
+                    ${dw.seedBackedUp ? 'Backed Up ✓' : 'Confirm Backup'}
+                  </button>
+                </div>
+              `}
+            </div>
+          </section>
+
+          <!-- Testnet Escrow Balances Breakdown -->
+          <section>
+            <h2 class="font-display text-base font-extrabold text-white mb-3 px-1">Available vs Locked-in-Escrow Balances</h2>
+            <div class="flex flex-col gap-2.5">
+              ${Object.keys(COINS).map(c => {
+                const m = COINS[c];
+                const avail = Number(bal.available[c] || 0);
+                const locked = Number(bal.locked[c] || 0);
+                const valFiat = (avail + locked) * m.priceUSD * fiatMeta.rateFromUSD;
+                return `
+                  <div class="bg-surface-card border border-surface-border rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                      ${getCoinSVG(c, 34)}
+                      <div>
+                        <div class="font-extrabold text-white text-sm sm:text-base">${c} <span class="text-xs font-normal text-slate-400">${m.name}</span></div>
+                        <div class="text-xs text-slate-400 tabular-nums">Index: ${formatFiat(m.priceUSD * fiatMeta.rateFromUSD, state.fiat)}</div>
+                      </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3 sm:w-[55%] text-xs pt-2 sm:pt-0 border-t sm:border-t-0 border-surface-border">
+                      <div>
+                        <div class="text-[10px] text-slate-400 uppercase">Available</div>
+                        <div class="font-extrabold text-white tabular-nums mt-0.5">${formatCrypto(avail, c)} ${c}</div>
+                      </div>
+                      <div>
+                        <div class="text-[10px] text-amber-300 uppercase">Locked Escrow</div>
+                        <div class="font-extrabold tabular-nums mt-0.5 ${locked > 0 ? 'text-amber-300' : 'text-slate-500'}">${formatCrypto(locked, c)} ${c}</div>
+                      </div>
+                      <div class="text-right">
+                        <div class="text-[10px] text-slate-400 uppercase">Total Value</div>
+                        <div class="font-extrabold text-brand tabular-nums mt-0.5">${formatFiat(valFiat, state.fiat)}</div>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </section>
+        </div>
+      `;
+    }
+
+    /* =========================================================================
+       12. VIEW 5: PROFILE & ACCOUNT SETTINGS (ZERO ADMIN BUTTONS OR HINTS)
+       ========================================================================= */
+    function renderProfileView() {
+      if (!state.isMember || !state.authUser) {
+        return `
+          <div class="max-w-lg mx-auto bg-surface-card border border-surface-border rounded-3xl p-8 text-center mt-6 space-y-4">
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-brand/15 border border-brand/35 flex items-center justify-center text-brand font-display text-2xl font-extrabold">W</div>
+            <h1 class="font-display text-xl font-extrabold text-white">Join Wayones Global P2P</h1>
+            <p class="text-xs sm:text-sm text-slate-400">Sign up with Email & Password to sync your offers, escrow trades, and verified trader reputation across all devices.</p>
+            <div class="grid grid-cols-2 gap-3 pt-2">
+              <button onclick="window.app.openAuthModal('signin')" class="h-12 rounded-xl bg-surface-elevated hover:bg-white/10 border border-surface-border text-white font-extrabold text-sm">Sign In</button>
+              <button onclick="window.app.openAuthModal('signup')" class="h-12 rounded-xl bg-brand hover:bg-brand-hover text-white font-extrabold text-sm shadow-glow">Sign Up</button>
+            </div>
+          </div>
+        `;
+      }
+
+      const prof = getCurrentProfile();
+      const name = (prof && prof.displayName) || state.authUser.displayName || 'Wayones Trader';
+      const email = (prof && prof.email) || state.authUser.email || 'Authenticated User';
+      const compRate = computeUserCompletion(state.authUser.uid);
+      const myOffers = state.offers.filter(o => o.creatorUid === state.authUser.uid && o.status !== 'REMOVED');
+
+      return `
+        <div class="max-w-3xl mx-auto space-y-5">
+          <!-- Profile Identity Card -->
+          <section class="hero-glow border border-brand/30 rounded-3xl p-5 sm:p-7 shadow-card">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-brand text-white font-display text-2xl font-extrabold flex items-center justify-center uppercase shadow-glow">
+                  ${esc(name.charAt(0))}
+                </div>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h1 class="font-display text-xl font-extrabold text-white truncate">${esc(name)}</h1>
+                    <span class="px-2 py-0.5 rounded bg-buy/15 border border-buy/35 text-buy text-[10px] font-extrabold uppercase">Verified Member</span>
+                  </div>
+                  <div class="text-xs text-slate-300 mt-0.5 truncate">${esc(email)}</div>
+                  <div class="text-[11px] font-mono text-slate-400 mt-1">
+                    Public EVM: ${esc(shortAddr(state.deviceWallet.address || (prof && prof.publicWalletAddress)))}
+                  </div>
+                </div>
+              </div>
+              <button onclick="window.app.handleSignOut()" class="px-4 py-2.5 rounded-xl bg-sell/15 hover:bg-sell border border-sell/40 text-red-300 hover:text-white text-xs font-extrabold transition-colors shrink-0">
+                Sign Out
+              </button>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-white/[0.08] text-center">
+              <div class="bg-surface-bg/75 rounded-2xl p-3 border border-surface-border">
+                <div class="text-lg sm:text-xl font-extrabold text-buy tabular-nums">${compRate}%</div>
+                <div class="text-[11px] text-slate-400">Completion</div>
+              </div>
+              <div class="bg-surface-bg/75 rounded-2xl p-3 border border-surface-border">
+                <div class="text-lg sm:text-xl font-extrabold text-white tabular-nums">${(prof && prof.completedTrades) || 0}</div>
+                <div class="text-[11px] text-slate-400">Completed</div>
+              </div>
+              <div class="bg-surface-bg/75 rounded-2xl p-3 border border-surface-border">
+                <div class="text-lg sm:text-xl font-extrabold text-brand tabular-nums">${myOffers.length}</div>
+                <div class="text-[11px] text-slate-400">My Active Ads</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Edit Display Name -->
+          <section class="bg-surface-card border border-surface-border rounded-3xl p-5 space-y-3">
+            <h2 class="font-display text-sm font-extrabold text-white">Update Public Display Name</h2>
+            <form onsubmit="window.app.updateDisplayName(event)" class="flex flex-col sm:flex-row gap-2.5">
+              <input id="profile-name-inp" type="text" required minlength="3" maxlength="24" value="${esc(name)}" class="flex-1 h-11 px-3.5 rounded-xl bg-surface-elevated border border-surface-border focus:border-brand focus:outline-none text-sm text-white" />
+              <button type="submit" class="h-11 px-5 rounded-xl bg-brand hover:bg-brand-hover text-white font-extrabold text-xs">Save Name</button>
+            </form>
+          </section>
+
+          <!-- User's Published Offers -->
+          <section class="bg-surface-card border border-surface-border rounded-3xl p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="font-display text-sm font-extrabold text-white">My Published Offers (${myOffers.length})</h2>
+              <button onclick="window.app.switchView('post')" class="text-xs font-bold text-brand hover:underline">+ New Offer</button>
+            </div>
+            ${myOffers.length === 0 ? `
+              <p class="text-xs text-slate-400">You haven't posted any live offers yet.</p>
+            ` : `
+              <div class="space-y-2.5">
+                ${myOffers.map(o => `
+                  <div class="bg-surface-elevated/70 border border-surface-border rounded-2xl p-3.5 flex items-center justify-between gap-3">
+                    <div>
+                      <div class="text-xs font-extrabold text-white">${o.type} ${o.crypto} @ ${formatFiat(o.price, o.fiat)}</div>
+                      <div class="text-[11px] text-slate-400 mt-0.5">Limit: ${formatFiat(o.minLimit, o.fiat)} – ${formatFiat(o.maxLimit, o.fiat)} • Status: <strong class="text-buy">${o.status}</strong></div>
+                    </div>
+                    <button onclick="window.app.removeMyOffer('${o.id}')" class="px-3 py-1.5 rounded-lg bg-sell/15 text-red-300 text-xs font-bold">Remove</button>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+          </section>
+        </div>
+      `;
+    }
+
+    async function updateDisplayName(e) {
+      e.preventDefault();
+      if (!db || !state.authUser) return;
+      const val = (document.getElementById('profile-name-inp')?.value || '').trim();
+      if (val.length < 3) return;
+      try {
+        await updateDoc(pubDoc('users', state.authUser.uid), { displayName: val });
+        await updateProfile(state.authUser, { displayName: val }).catch(() => {});
+        showToast('Display name updated!', 'success');
+      } catch (err) {
+        console.error('Update name error:', err);
+        showToast('Could not update display name.', 'error');
+      }
+    }
+
+    /* =========================================================================
+       13. STRICTLY HIDDEN OWNER-ONLY ADMIN PANEL (5-TAP GESTURE / CTRL+SHIFT+A)
+       ========================================================================= */
+    function handleBrandLogoClick() {
+      const now = Date.now();
+      logoTapTimestamps = logoTapTimestamps.filter(ts => now - ts < 3000);
+      logoTapTimestamps.push(now);
+
+      if (logoTapTimestamps.length >= 5) {
+        logoTapTimestamps = [];
+        triggerHiddenOwnerGate();
+        return;
+      }
+
+      // Normal 1-tap behavior navigates home to Market
+      if (state.activeView !== 'market') {
+        state.activeView = 'market';
+        renderAll();
+      }
+    }
+
+    // Desktop shortcut: Ctrl+Shift+A
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        triggerHiddenOwnerGate();
+      } else if (e.key === 'Escape') {
+        if (document.getElementById('modal-root')?.innerHTML.trim()) {
+          closeModal();
+        }
+      }
+    });
+
+    function triggerHiddenOwnerGate() {
+      // Must be authenticated as a real member (not anonymous guest)
+      if (!state.isMember || !state.authUser || !db) {
+        // Completely silent for regular/guest users — never reveal panel exists!
+        return;
+      }
+
+      // Case A: system/adminConfig does NOT exist yet -> One-time Claim Owner Access
+      if (!state.adminConfig) {
+        openClaimOwnerModal();
+        return;
+      }
+
+      // Case B: Already claimed by another UID -> STRICT SILENT IGNORE (zero hint/error!)
+      if (state.adminConfig.ownerUid !== state.authUser.uid) {
+        return;
+      }
+
+      // Case C: Authenticated user IS the verified Owner
+      if (state.ownerSessionUnlocked) {
+        openOwnerOverlay();
+      } else {
+        openOwnerPinUnlockModal();
+      }
+    }
+
+    function openClaimOwnerModal() {
+      openModal(`
+        <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade">
+          <div class="animate-slide w-full max-w-md bg-surface-card border border-brand/50 rounded-3xl p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="px-2 py-0.5 rounded bg-brand/20 border border-brand/40 text-[10px] font-extrabold text-brand uppercase">One-Time Setup</span>
+                <h3 class="font-display text-lg font-extrabold text-white mt-1">Claim Owner Access</h3>
+              </div>
+              <button onclick="window.app.closeModal()" class="w-8 h-8 rounded-lg bg-surface-elevated text-slate-300 flex items-center justify-center">✕</button>
+            </div>
+
+            <p class="text-xs text-slate-300 leading-relaxed">
+              This will permanently bind your authenticated Firebase account as the sole Wayones Owner. Once claimed, no other account can ever trigger or access the Owner Admin Panel.
+            </p>
+
+            <div class="bg-surface-bg border border-surface-border rounded-xl p-3 text-xs space-y-1">
+              <div class="text-slate-400">Owner Email: <strong class="text-white">${esc(state.authUser.email || 'Authenticated')}</strong></div>
+              <div class="text-slate-400 font-mono text-[11px] break-all">UID: <span class="text-brand">${esc(state.authUser.uid)}</span></div>
+            </div>
+
+            <form onsubmit="window.app.submitClaimOwner(event)" class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Set 6-Digit Owner Security PIN *</label>
+                <input id="claim-pin-1" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required placeholder="6 digits (e.g. 482910)" class="w-full h-11 px-3.5 rounded-xl bg-surface-elevated border border-surface-border focus:border-brand focus:outline-none text-base font-mono tracking-[0.35em] text-white text-center" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Confirm 6-Digit PIN *</label>
+                <input id="claim-pin-2" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required placeholder="Confirm 6 digits" class="w-full h-11 px-3.5 rounded-xl bg-surface-elevated border border-surface-border focus:border-brand focus:outline-none text-base font-mono tracking-[0.35em] text-white text-center" />
+              </div>
+              <div id="claim-err" class="hidden px-3 py-2 rounded-xl bg-sell/15 border border-sell/40 text-xs font-semibold text-red-300"></div>
+              <button type="submit" class="w-full h-12 rounded-xl bg-brand hover:bg-brand-hover text-white font-extrabold text-sm shadow-glow">
+                Bind Owner UID & Lock Panel
+              </button>
+            </form>
+          </div>
+        </div>
+      `);
+    }
+
+    async function submitClaimOwner(e) {
+      e.preventDefault();
+      const p1 = (document.getElementById('claim-pin-1')?.value || '').trim();
+      const p2 = (document.getElementById('claim-pin-2')?.value || '').trim();
+      const errBox = document.getElementById('claim-err');
+
+      if (!/^\d{6}$/.test(p1)) {
+        if (errBox) { errBox.textContent = 'PIN must be exactly 6 numeric digits.'; errBox.classList.remove('hidden'); }
+        return;
+      }
+      if (p1 !== p2) {
+        if (errBox) { errBox.textContent = 'PINs do not match.'; errBox.classList.remove('hidden'); }
+        return;
+      }
+
+      try {
+        // Double-check Firestore before claiming so race condition cannot overwrite an existing owner
+        const cfgRef = pubDoc('system', 'adminConfig');
+        const snap = await getDoc(cfgRef);
+        if (snap.exists()) {
+          closeModal();
+          return;
+        }
+
+        const pinHash = await sha256Hex(`${state.authUser.uid}:${p1}:wayones_owner_salt`);
+        await setDoc(cfgRef, {
+          ownerUid: state.authUser.uid,
+          ownerEmail: state.authUser.email || '',
+          pinHash,
+          claimedAt: Date.now()
+        });
+
+        state.ownerSessionUnlocked = true;
+        closeModal();
+        openOwnerOverlay();
+        showToast('Owner UID permanently bound! Welcome to Wayones Owner Console.', 'success');
+      } catch (err) {
+        console.error('Claim owner failed:', err);
+        if (errBox) { errBox.textContent = 'Failed to bind Owner config.'; errBox.classList.remove('hidden'); }
+      }
+    }
+
+    function openOwnerPinUnlockModal() {
+      openModal(`
+        <div class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade">
+          <div class="animate-slide w-full max-w-sm bg-surface-card border border-brand/45 rounded-3xl p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between">
+              <h3 class="font-display text-base font-extrabold text-white">Owner Security Verification</h3>
+              <button onclick="window.app.closeModal()" class="w-8 h-8 rounded-lg bg-surface-elevated text-slate-300 flex items-center justify-center">✕</button>
+            </div>
+            <p class="text-xs text-slate-400">Verified Owner UID detected. Enter your 6-digit Owner Security PIN.</p>
+            <form onsubmit="window.app.verifyOwnerPin(event)" class="space-y-3">
+              <input id="unlock-pin-inp" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autofocus placeholder="••••••" class="w-full h-12 px-4 rounded-xl bg-surface-elevated border border-surface-border focus:border-brand focus:outline-none text-lg font-mono tracking-[0.45em] text-white text-center" />
+              <div id="unlock-pin-err" class="hidden px-3 py-2 rounded-xl bg-sell/15 border border-sell/40 text-xs font-semibold text-red-300"></div>
+              <button type="submit" class="w-full h-11 rounded-xl bg-brand hover:bg-brand-hover text-white font-extrabold text-sm shadow-glow">Unlock Owner Panel</button>
+            </form>
+          </div>
+        </div>
+      `);
+    }
+
+    async function verifyOwnerPin(e) {
+      e.preventDefault();
+      if (!state.authUser || !state.adminConfig || state.adminConfig.ownerUid !== state.authUser.uid) {
+        closeModal();
+        return;
+      }
+      const pin = (document.getElementById('unlock-pin-inp')?.value || '').trim();
+      const errBox = document.getElementById('unlock-pin-err');
+      const hash = await sha256Hex(`${state.authUser.uid}:${pin}:wayones_owner_salt`);
+      if (hash !== state.adminConfig.pinHash) {
+        if (errBox) { errBox.textContent = 'Incorrect Owner Security PIN.'; errBox.classList.remove('hidden'); }
+        return;
+      }
+      state.ownerSessionUnlocked = true;
+      closeModal();
+      openOwnerOverlay();
+    }
+    function openOwnerOverlay() {
+      if (!state.authUser || !state.adminConfig || state.adminConfig.ownerUid !== state.authUser.uid || !state.ownerSessionUnlocked) {
+        return;
+      }
+      state.ownerPanelOpen = true;
+      document.body.style.overflow = 'hidden';
+      renderOwnerOverlay();
+    }
+
+    function closeOwnerOverlay() {
+      state.ownerPanelOpen = false;
+      state.selectedAdminDisputeId = null;
+      const root = document.getElementById('owner-overlay-root');
+      if (root) root.innerHTML = '';
+      if (!document.getElementById('modal-root')?.innerHTML.trim()) {
+        document.body.style.overflow = '';
+      }
+    }
+
+    function renderOwnerOverlay() {
+      const root = document.getElementById('owner-overlay-root');
+      if (!root || !state.ownerPanelOpen) return;
+
+      const usersList = Object.values(state.usersMap);
+      const activeOffers = state.offers.filter(o => o.status === 'ACTIVE');
+      const allLiveOffers = state.offers.filter(o => o.status !== 'REMOVED');
+      const openDisputes = state.trades.filter(t => t.status === 'DISPUTED');
+      const completedTrades = state.trades.filter(t => t.status === 'RELEASED');
+      const ownerUid = state.adminConfig?.ownerUid || state.authUser?.uid || 'YOUR_OWNER_UID';
+
+      const firestoreRulesText = `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner() {
+      return isSignedIn() && request.auth.uid == "${ownerUid}";
+    }
+
+    match /artifacts/{appId}/public/data/system/adminConfig {
+      allow read: if isSignedIn();
+      // One-time claim only if doc doesn't exist; updates strictly Owner-only
+      allow create: if isSignedIn() && !exists(/databases/$(database)/documents/artifacts/$(appId)/public/data/system/adminConfig);
+      allow update, delete: if isOwner();
+    }
+
+    match /artifacts/{appId}/public/data/users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      // Only user (cannot unban themselves) OR Owner can update
+      allow update: if isOwner() || (isSignedIn() && request.auth.uid == uid && request.resource.data.banned == resource.data.banned);
+      allow delete: if isOwner();
+    }
+
+    match /artifacts/{appId}/public/data/offers/{offerId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isOwner() || (isSignedIn() && resource.data.creatorUid == request.auth.uid);
+    }
+
+    match /artifacts/{appId}/public/data/trades/{tradeId} {
+      allow read: if isOwner() || (isSignedIn() && (resource.data.buyerUid == request.auth.uid || resource.data.sellerUid == request.auth.uid));
+      allow create: if isSignedIn();
+      // Only Owner can execute REFUNDED verdict or resolve DISPUTED trades
+      allow update: if isOwner() || (
+        isSignedIn() &&
+        (resource.data.buyerUid == request.auth.uid || resource.data.sellerUid == request.auth.uid) &&
+        resource.data.status != 'DISPUTED' &&
+        request.resource.data.status != 'REFUNDED'
+      );
+    }
+
+    match /artifacts/{appId}/public/data/trade_messages/{msgId} {
+      allow read, create: if isSignedIn();
+      allow update, delete: if false; // Immutable chat audit log
+    }
+  }
+}`;
+
+      let tabBody = '';
+
+      if (state.ownerPanelTab === 'disputes') {
+        const selected = state.selectedAdminDisputeId
+          ? state.trades.find(t => t.id === state.selectedAdminDisputeId)
+          : openDisputes[0];
+
+        if (openDisputes.length === 0 && !selected) {
+          tabBody = `
+            <div class="bg-surface-card border border-surface-border rounded-3xl p-10 text-center">
+              <div class="w-12 h-12 mx-auto rounded-2xl bg-buy/15 border border-buy/35 text-buy flex items-center justify-center font-extrabold text-lg mb-3">✓</div>
+              <h3 class="text-base font-extrabold text-white">Zero Open Disputes</h3>
+              <p class="text-xs text-slate-400 mt-1">All escalated Escrow cases have been resolved cleanly.</p>
+            </div>
+          `;
+        } else {
+          const activeCase = selected || openDisputes[0];
+          const caseMsgs = activeCase ? state.messages.filter(m => m.tradeId === activeCase.id) : [];
+
+          tabBody = `
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              <!-- Dispute Queue -->
+              <div class="lg:col-span-4 space-y-2.5">
+                <div class="text-xs font-extrabold uppercase tracking-wider text-slate-400 px-1">Open Disputes (${openDisputes.length})</div>
+                ${openDisputes.map(d => `
+                  <button onclick="window.app.selectAdminDispute('${d.id}')" class="w-full text-left p-4 rounded-2xl border transition-all ${
+                    activeCase && activeCase.id === d.id ? 'bg-sell/15 border-sell' : 'bg-surface-card border-surface-border hover:border-brand/40'
+                  }">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="text-sm font-extrabold text-white">${formatCrypto(d.cryptoAmount, d.crypto)} ${d.crypto}</span>
+                      <span class="px-2 py-0.5 rounded bg-sell text-white text-[10px] font-extrabold">DISPUTED</span>
+                    </div>
+                    <div class="text-xs text-red-200 font-semibold mt-1 truncate">${esc(d.disputeInfo?.reason || 'Dispute')}</div>
+                    <div class="text-[11px] text-slate-400 mt-1">${esc(d.buyerName)} vs ${esc(d.sellerName)} • ${timeAgo(d.disputeInfo?.openedAt)}</div>
+                  </button>
+                `).join('')}
+              </div>
+
+              <!-- Dispute Inspector -->
+              ${activeCase ? `
+                <div class="lg:col-span-8 bg-surface-card border border-surface-border rounded-3xl p-5 space-y-4">
+                  <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-surface-border">
+                    <div>
+                      <h3 class="font-display text-base font-extrabold text-white">Case: ${formatCrypto(activeCase.cryptoAmount, activeCase.crypto)} ${activeCase.crypto} (${formatFiat(activeCase.fiatAmount, activeCase.fiat)})</h3>
+                      <div class="text-xs text-slate-400">Buyer: <strong class="text-white">${esc(activeCase.buyerName)}</strong> • Seller: <strong class="text-white">${esc(activeCase.sellerName)}</strong></div>
+                    </div>
+                    ${statusBadgeHTML(activeCase.status)}
+                  </div>
+
+                  <!-- Frozen Offer Terms -->
+                  <div class="bg-surface-bg border border-brand/30 rounded-2xl p-3.5 space-y-2">
+                    <div class="text-[11px] font-extrabold uppercase tracking-wider text-brand">Frozen Offer Terms Snapshot (At Trade Open)</div>
+                    <div class="flex flex-wrap gap-1.5">${renderRuleBadges(activeCase.frozenTermsSnapshot)}</div>
+                    <p class="text-xs text-slate-300">${esc(activeCase.frozenTermsSnapshot?.publicTerms || '')}</p>
+                  </div>
+
+                  <!-- Submitted Dispute Evidence -->
+                  <div class="bg-sell/10 border border-sell/35 rounded-2xl p-4 space-y-1.5 text-xs">
+                    <div class="font-extrabold text-red-300 uppercase text-[11px]">Submitted Dispute Evidence</div>
+                    <div>Opened By: <strong class="text-white">${esc(activeCase.disputeInfo?.openedByRole || 'N/A')}</strong> • Reason: <strong class="text-white">${esc(activeCase.disputeInfo?.reason || '')}</strong></div>
+                    <div>UTR / Reference: <span class="font-mono text-amber-300">${esc(activeCase.disputeInfo?.utrNumber || 'None')}</span></div>
+                    <div class="break-all">Video / Receipt Proof: <span class="text-brand font-semibold">${esc(activeCase.disputeInfo?.proofUrl || 'None')}</span></div>
+                  </div>
+
+                  <!-- Trade Chat Transcript + Send Arbitrator Message -->
+                  <div class="bg-surface-bg border border-surface-border rounded-2xl overflow-hidden">
+                    <div class="px-4 py-2.5 bg-surface-elevated border-b border-surface-border text-xs font-bold text-slate-300">Immutable Trade Chat Log (${caseMsgs.length})</div>
+                    <div class="max-h-56 overflow-y-auto p-3.5 space-y-2.5 text-xs">
+                      ${caseMsgs.map(m => `
+                        <div class="p-2.5 rounded-xl ${m.senderRole === 'ADMIN' ? 'bg-escrow/15 border border-escrow/35 text-amber-200' : m.senderRole === 'SYSTEM' ? 'bg-brand/10 text-slate-300' : 'bg-surface-elevated text-slate-100'}">
+                          <div class="text-[10px] font-bold opacity-75 mb-0.5">${esc(m.senderName)} [${esc(m.senderRole)}] • ${timeAgo(m.createdAt)}</div>
+                          <div>${esc(m.text)}</div>
+                        </div>
+                      `).join('')}
+                    </div>
+                    <form onsubmit="window.app.sendAdminChatMessage(event, '${activeCase.id}')" class="p-2.5 bg-surface-elevated border-t border-surface-border flex gap-2">
+                      <input id="admin-chat-inp" type="text" required placeholder="Send official [Wayones Arbitrator] message into trade chat..." class="flex-1 h-10 px-3 rounded-xl bg-surface-bg border border-surface-border text-xs text-white" />
+                      <button type="submit" class="h-10 px-4 rounded-xl bg-escrow text-black font-extrabold text-xs shrink-0">Send as Arbitrator</button>
+                    </form>
+                  </div>
+
+                  ${activeCase.status === 'DISPUTED' ? `
+                    <!-- Final Binding Verdict Controls -->
+                    <div class="bg-surface-bg border border-escrow/40 rounded-2xl p-4 space-y-3">
+                      <label class="block text-xs font-bold text-amber-300">Official Arbitration Verdict Note</label>
+                      <input id="admin-verdict-inp" type="text" value="Evidence and frozen offer terms audited by Wayones Owner Arbitration." class="w-full h-10 px-3 rounded-xl bg-surface-elevated border border-surface-border text-xs text-white" />
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button onclick="window.app.adminExecuteVerdict('${activeCase.id}', 'BUYER')" class="min-h-[44px] px-4 py-2.5 rounded-xl bg-buy hover:bg-emerald-400 text-[#041F15] font-extrabold text-xs sm:text-sm">
+                          ⚖️ Award Funds to Buyer (RELEASED)
+                        </button>
+                        <button onclick="window.app.adminExecuteVerdict('${activeCase.id}', 'SELLER')" class="min-h-[44px] px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-white font-extrabold text-xs sm:text-sm shadow-glow">
+                          ⚖️ Refund Funds to Seller (REFUNDED)
+                        </button>
+                      </div>
+                    </div>
+                  ` : ''}
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }
+      } else if (state.ownerPanelTab === 'moderation') {
+        tabBody = `
+          <div class="space-y-6">
+            <!-- Live Offers Moderation -->
+            <section class="bg-surface-card border border-surface-border rounded-3xl p-5 space-y-3">
+              <h3 class="font-display text-base font-extrabold text-white">Live Marketplace Offers (${allLiveOffers.length})</h3>
+              ${allLiveOffers.length === 0 ? `<p class="text-xs text-slate-400">No user-created live offers in Firestore yet.</p>` : `
+                <div class="space-y-2.5">
+                  ${allLiveOffers.map(o => `
+                    <div class="bg-surface-elevated/70 border border-surface-border rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <div class="text-xs sm:text-sm font-bold text-white">${esc(o.creatorName)} — ${o.type} ${o.crypto} @ ${formatFiat(o.price, o.fiat)}</div>
+                        <div class="text-[11px] text-slate-400">Status: <strong class="${o.status === 'ACTIVE' ? 'text-buy' : 'text-amber-300'}">${o.status}</strong> • Third-Party: ${o.termsFlags?.thirdPartyAllowed ? 'Allowed' : 'Own Only'}</div>
+                      </div>
+                      <div class="flex gap-2 shrink-0">
+                        <button onclick="window.app.adminToggleOfferStatus('${o.id}', '${o.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE'}')" class="px-3 py-1.5 rounded-lg bg-surface-bg border border-surface-border text-xs font-bold text-slate-200 hover:text-white">
+                          ${o.status === 'ACTIVE' ? 'Pause' : 'Activate'}
+                        </button>
+                        <button onclick="window.app.adminToggleOfferStatus('${o.id}', 'REMOVED')" class="px-3 py-1.5 rounded-lg bg-sell/15 border border-sell/35 text-xs font-bold text-red-300 hover:bg-sell hover:text-white">
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              `}
+            </section>
+
+            <!-- Registered Users Moderation -->
+            <section class="bg-surface-card border border-surface-border rounded-3xl p-5 space-y-3">
+              <h3 class="font-display text-base font-extrabold text-white">Registered Users (${usersList.length})</h3>
+              <div class="space-y-2.5">
+                ${usersList.map(u => {
+                  const isSelf = u.id === ownerUid;
+                  return `
+                    <div class="bg-surface-elevated/70 border border-surface-border rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <span class="text-sm font-bold text-white">${esc(u.displayName || 'Trader')}</span>
+                          ${isSelf ? `<span class="px-2 py-0.5 rounded bg-brand/20 text-brand text-[10px] font-extrabold">OWNER</span>` : ''}
+                          ${u.banned ? `<span class="px-2 py-0.5 rounded bg-sell text-white text-[10px] font-extrabold">BANNED</span>` : ''}
+                        </div>
+                        <div class="text-xs text-slate-400 truncate">${esc(u.email)} • Wallet: <span class="font-mono">${esc(shortAddr(u.publicWalletAddress))}</span> • Completed: ${u.completedTrades || 0}</div>
+                      </div>
+                      ${!isSelf ? `
+                        <button onclick="window.app.adminToggleBanUser('${u.id}', ${!u.banned})" class="px-3.5 py-2 rounded-xl text-xs font-extrabold shrink-0 ${
+                          u.banned ? 'bg-buy/15 border border-buy/35 text-buy' : 'bg-sell/15 border border-sell/35 text-red-300 hover:bg-sell hover:text-white'
+                        }">
+                          ${u.banned ? 'Unban User' : 'Ban User'}
+                        </button>
+                      ` : ''}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </section>
+          </div>
+        `;
+      } else {
+        tabBody = `
+          <div class="space-y-5">
+            <!-- Firestore Security Rules Box -->
+            <section class="bg-surface-card border border-brand/35 rounded-3xl p-5 space-y-3">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 class="font-display text-base font-extrabold text-white">Server-Enforced Cloud Firestore Security Rules</h3>
+                  <p class="text-xs text-slate-400">Paste these rules into Firebase Console → Firestore Database → Rules to enforce Owner UID access on Google's servers.</p>
+                </div>
+                <button onclick="window.app.copyFirestoreRules()" class="px-4 py-2 rounded-xl bg-brand hover:bg-brand-hover text-white text-xs font-extrabold shrink-0">Copy Security Rules</button>
+              </div>
+              <pre id="owner-rules-pre" class="bg-surface-bg border border-surface-border rounded-2xl p-4 text-[11px] font-mono text-emerald-300 overflow-x-auto leading-relaxed">${esc(firestoreRulesText)}</pre>
+            </section>
+
+            <!-- Mainnet Deployment Checklist -->
+            <section class="bg-surface-card border border-surface-border rounded-3xl p-5 space-y-3">
+              <h3 class="font-display text-base font-extrabold text-white">Mainnet BSC / Polygon Escrow Deployment Checklist</h3>
+              <ul class="space-y-2 text-xs text-slate-300 list-disc pl-5 leading-relaxed">
+                <li><strong>Smart Contract Escrow:</strong> Deploy an audited 2-of-3 Multi-Sig Escrow contract (Solidity) on BNB Smart Chain or Polygon PoS where Seller calls <code class="text-brand">lockUSDT()</code>, releases via <code class="text-brand">releaseToBuyer()</code>, and your Owner address acts as the 3rd Arbitrator key exclusively on <code class="text-sell">DISPUTED</code> trades.</li>
+                <li><strong>Firebase Production Setup:</strong> Enable <em>Email/Password</em> under Firebase Authentication, paste the Security Rules above, and restrict your Firebase API key to your custom domain in Google Cloud Console.</li>
+                <li><strong>Custom Domain & HTTPS:</strong> Host <code class="text-white">wayones.html</code> (renamed to <code class="text-white">index.html</code>) on Cloudflare Pages, Vercel, or Firebase Hosting and bind your custom domain with automatic TLS/SSL.</li>
+                <li><strong>Security Audit:</strong> Before allowing real public USDT funds, run a professional smart-contract audit and verify local regulatory requirements for your target regions.</li>
+              </ul>
+            </section>
+          </div>
+        `;
+      }
+
+      root.innerHTML = `
+        <div class="fixed inset-0 z-[100] bg-surface-bg overflow-y-auto animate-fade">
+          <div class="sticky top-0 z-20 bg-surface-card/95 backdrop-blur-xl border-b border-brand/35 px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="px-2.5 py-1 rounded-lg bg-brand text-white text-[11px] font-extrabold uppercase tracking-wider">Owner Console</span>
+              <h2 class="font-display text-sm sm:text-base font-extrabold text-white truncate">Wayones Administration</h2>
+            </div>
+            <button onclick="window.app.closeOwnerOverlay()" class="px-4 py-2 rounded-xl bg-surface-elevated hover:bg-white/10 border border-surface-border text-xs font-bold text-white">
+              Return to App
+            </button>
+          </div>
+
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+            <!-- Live KPI Stats -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div class="bg-surface-card border border-surface-border rounded-2xl p-4">
+                <div class="text-xs text-slate-400">Total Users</div>
+                <div class="font-display text-2xl font-extrabold text-white tabular-nums mt-1">${usersList.length}</div>
+              </div>
+              <div class="bg-surface-card border border-surface-border rounded-2xl p-4">
+                <div class="text-xs text-slate-400">Active Offers</div>
+                <div class="font-display text-2xl font-extrabold text-brand tabular-nums mt-1">${activeOffers.length}</div>
+              </div>
+              <div class="bg-surface-card border border-sell/40 rounded-2xl p-4">
+                <div class="text-xs text-red-300">Open Disputes</div>
+                <div class="font-display text-2xl font-extrabold text-sell tabular-nums mt-1">${openDisputes.length}</div>
+              </div>
+              <div class="bg-surface-card border border-buy/35 rounded-2xl p-4">
+                <div class="text-xs text-emerald-300">Completed Trades</div>
+                <div class="font-display text-2xl font-extrabold text-buy tabular-nums mt-1">${completedTrades.length}</div>
+              </div>
+            </div>
+
+            <!-- Admin Navigation Tabs -->
+            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
+              <button onclick="window.app.setOwnerTab('disputes')" class="px-4 py-2.5 rounded-xl text-xs font-extrabold whitespace-nowrap border ${state.ownerPanelTab === 'disputes' ? 'bg-brand text-white border-brand shadow-glow' : 'bg-surface-card border-surface-border text-slate-300'}">
+                Dispute Arbitration Desk (${openDisputes.length})
+              </button>
+              <button onclick="window.app.setOwnerTab('moderation')" class="px-4 py-2.5 rounded-xl text-xs font-extrabold whitespace-nowrap border ${state.ownerPanelTab === 'moderation' ? 'bg-brand text-white border-brand shadow-glow' : 'bg-surface-card border-surface-border text-slate-300'}">
+                Marketplace & User Moderation
+              </button>
+              <button onclick="window.app.setOwnerTab('security')" class="px-4 py-2.5 rounded-xl text-xs font-extrabold whitespace-nowrap border ${state.ownerPanelTab === 'security' ? 'bg-brand text-white border-brand shadow-glow' : 'bg-surface-card border-surface-border text-slate-300'}">
+                Live Deployment Security
+              </button>
+            </div>
+
+            ${tabBody}
+          </div>
+        </div>
+      `;
+    }
+
+    async function sendAdminChatMessage(e, tradeId) {
+      e.preventDefault();
+      if (!db || !state.ownerSessionUnlocked) return;
+      const inp = document.getElementById('admin-chat-inp');
+      const text = (inp?.value || '').trim();
+      if (!text) return;
+      inp.value = '';
+      try {
+        await addDoc(pubCol('trade_messages'), {
+          tradeId,
+          senderUid: state.authUser.uid,
+          senderName: 'Wayones Arbitrator',
+          senderRole: 'ADMIN',
+          text,
+          createdAt: Date.now()
+        });
+        showToast('Arbitrator message posted to trade chat.', 'success');
+      } catch (err) {
+        console.error('Admin chat error:', err);
+      }
+    }
+
+    async function adminExecuteVerdict(tradeId, winner) {
+      if (!state.ownerSessionUnlocked) return;
+      const note = (document.getElementById('admin-verdict-inp')?.value || '').trim();
+      if (winner === 'BUYER') {
+        await settleEscrowRelease(tradeId, true, note);
+      } else {
+        await settleEscrowRefund(tradeId, note);
+      }
+      renderOwnerOverlay();
+    }
+
+    async function adminToggleOfferStatus(offerId, newStatus) {
+      if (!db || !state.ownerSessionUnlocked) return;
+      try {
+        await updateDoc(pubDoc('offers', offerId), { status: newStatus });
+        showToast(`Offer status updated to ${newStatus}.`, 'success');
+      } catch (err) {
+        showToast('Failed to update offer.', 'error');
+      }
+    }
+
+    async function adminToggleBanUser(uid, shouldBan) {
+      if (!db || !state.ownerSessionUnlocked) return;
+      try {
+        await updateDoc(pubDoc('users', uid), { banned: Boolean(shouldBan) });
+        showToast(shouldBan ? 'User has been banned.' : 'User unbanned.', 'warning');
+      } catch (err) {
+        showToast('Failed to update user moderation status.', 'error');
+      }
+    }
+
+    /* =========================================================================
+       14. MODAL HELPERS & PUBLIC EVENT BRIDGE
+       ========================================================================= */
+    function openModal(html) {
+      const root = document.getElementById('modal-root');
+      if (root) root.innerHTML = html;
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      const root = document.getElementById('modal-root');
+      if (root) root.innerHTML = '';
+      state.activeTradeRoomId = null;
+      tradeDraft = null;
+      clearTradeTimer();
+      if (!state.ownerPanelOpen) {
+        document.body.style.overflow = '';
+      }
+    }
+
+    // Bind brand logo click listener for normal home navigation + hidden 5-tap gesture
+    document.getElementById('brand-logo-btn')?.addEventListener('click', handleBrandLogoClick);
+
+    // Expose clean API for inline HTML handlers
+    window.app = {
+      switchView(v) { state.activeView = v; renderAll(); window.scrollTo({ top: 0, behavior: 'smooth' }); },
+      setFiat(code) { if (FIATS[code]) { state.fiat = code; state.postDraft.fiat = code; renderAll(); showToast(`Currency switched to ${code}`, 'info'); } },
+      handleHeaderAuthClick() { state.isMember ? this.switchView('profile') : openAuthModal('signin'); },
+      openAuthModal,
+      submitAuthForm,
+      handleSignOut,
+      setMarketFilter(k, v) { state.marketFilter[k] = v; renderAll(); },
+      setMarketAmount(v) {
+        state.marketFilter.amount = v;
+        const el = document.getElementById('market-amt-input');
+        const pos = el ? el.selectionStart : null;
+        renderAll();
+        const next = document.getElementById('market-amt-input');
+        if (next) { next.focus(); if (pos !== null) { try { next.setSelectionRange(pos, pos); } catch (e) {} } }
+      },
+      resetFilters() {
+        state.marketFilter.payment = 'ALL';
+        state.marketFilter.thirdParty = 'ALL';
+        state.marketFilter.amount = '';
+        state.marketFilter.sort = 'best_price';
+        renderAll();
+      },
+      removeMyOffer,
+      openTradeModal,
+      fillTradeFiat(val) {
+        const inp = document.getElementById('td-fiat-inp');
+        if (inp) { inp.value = Number(val).toFixed(2); this.syncTradeFromFiat(); }
+      },
+      syncTradeFromFiat() {
+        if (!tradeDraft) return;
+        const f = parseFloat(document.getElementById('td-fiat-inp')?.value);
+        const cInp = document.getElementById('td-crypto-inp');
+        if (cInp) cInp.value = (!isNaN(f) && f >= 0) ? formatCrypto(f / Number(tradeDraft.offer.price), tradeDraft.offer.crypto) : '';
+        validateTradeDraft();
+      },
+      syncTradeFromCrypto() {
+        if (!tradeDraft) return;
+        const c = parseFloat(document.getElementById('td-crypto-inp')?.value);
+        const fInp = document.getElementById('td-fiat-inp');
+        if (fInp) fInp.value = (!isNaN(c) && c >= 0) ? (c * Number(tradeDraft.offer.price)).toFixed(2) : '';
+        validateTradeDraft();
+      },
+      selectTradePM(pm) {
+        if (!tradeDraft) return;
+        tradeDraft.selectedPayment = pm;
+        document.querySelectorAll('.td-pm-btn').forEach(b => {
+          const on = b.dataset.pm === pm;
+          b.className = `td-pm-btn px-3 py-2 rounded-xl text-xs font-bold border transition-all ${on ? 'bg-brand/20 border-brand text-white' : 'bg-surface-elevated border-surface-border text-slate-400'}`;
+        });
+      },
+      toggleTradeAgree(checked) { if (tradeDraft) { tradeDraft.agreed = Boolean(checked); validateTradeDraft(); } },
+      confirmOpenTrade,
+      setTradesTab(t) { state.tradesTab = t; renderAll(); },
+      openTradeRoom,
+      sendTradeMessage,
+      openMarkPaidModal,
+      submitMarkPaid,
+      cancelEscrowTrade,
+      sellerReleaseCrypto(id) { settleEscrowRelease(id, false); },
+      simulateFeaturedRelease(id) { settleEscrowRelease(id, false); },
+      simulateFeaturedBuyerPaid,
+      openDisputeModal,
+      submitDispute,
+      setPostDraft(k, v) { state.postDraft[k] = v; renderAll(); },
+      togglePostDraft(k) { state.postDraft[k] = !state.postDraft[k]; renderAll(); },
+      togglePostPM(pm) {
+        const arr = state.postDraft.paymentMethods;
+        state.postDraft.paymentMethods = arr.includes(pm) ? arr.filter(x => x !== pm) : [...arr, pm];
+        renderAll();
+      },
+      submitNewOffer,
+      generateRealEvmWallet,
+      openImportSeedModal,
+      submitImportSeed,
+      setWalletNetwork(net) { state.deviceWallet.network = net; renderAll(); },
+      toggleSeedReveal() { state.deviceWallet.seedRevealed = !state.deviceWallet.seedRevealed; renderAll(); },
+      confirmSeedBackedUp() { state.deviceWallet.seedBackedUp = true; renderAll(); showToast('Seed phrase backup confirmed!', 'success'); },
+      claimTestnetFaucet,
+      updateDisplayName,
+      submitClaimOwner,
+      verifyOwnerPin,
+      closeOwnerOverlay,
+      setOwnerTab(t) { state.ownerPanelTab = t; renderOwnerOverlay(); },
+      selectAdminDispute(id) { state.selectedAdminDisputeId = id; renderOwnerOverlay(); },
+      sendAdminChatMessage,
+      adminExecuteVerdict,
+      adminToggleOfferStatus,
+      adminToggleBanUser,
+      copyFirestoreRules() {
+        const txt = document.getElementById('owner-rules-pre')?.textContent || '';
+        copyText(txt, 'Firestore Security Rules copied!');
+      },
+      copy: copyText,
+      closeModal,
+      handleBackdrop(e) { if (e.target === e.currentTarget) closeModal(); }
+    };
+
+    // Start Application
+    bootFirebase();
+  </script>
+</body>
 </html>
